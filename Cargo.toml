@@ -1,0 +1,17 @@
+[package]
+name = "fluidspaces"
+version = "0.4.0"
+authors = ["Peter Henry <me@peterhenry.net>"]
+
+[[bin]]
+name = "fluidspaces"
+doc = false
+
+[dependencies]
+clap = "2.29.0"
+unicode-segmentation = "1.2.0"
+nom = "3.2.1"
+
+[dependencies.i3ipc]
+version = "0.8.2"
+features = ["i3-4-14"]
