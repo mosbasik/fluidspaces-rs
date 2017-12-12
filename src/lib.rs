@@ -13,8 +13,6 @@ use nom::{digit, rest};
 
 
 pub trait I3ConnectionExt {
-    fn get_wp(&self, title: &str) -> Result<&Workspace, String>;
-
     fn promote_wp_title(&mut self, title: &str) -> Result<(), String>;
     fn fixup_wps(&mut self) -> Result<(), String>;
 
@@ -24,10 +22,6 @@ pub trait I3ConnectionExt {
 }
 
 impl I3ConnectionExt for I3Connection {
-    fn get_wp(&self, title: &str) -> Result<&Workspace, String> {
-        Err(String::from("implement I3ConnectionExt::get_wp"))
-    }
-
     fn promote_wp_title(&mut self, title: &str) -> Result<(), String> {
 
         let wps = match self.get_workspaces() {
