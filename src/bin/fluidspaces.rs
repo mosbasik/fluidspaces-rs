@@ -11,6 +11,7 @@ use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;
 
+use fluidspaces::WorkspaceExt;
 use fluidspaces::WorkspacesExt;
 use fluidspaces::I3ConnectionExt;
 
@@ -64,10 +65,10 @@ fn main() {
         .group(ArgGroup::with_name("action")
             .arg("bring_to")
             .arg("send_to"))
-        // .arg(Arg::with_name("toggle")
-        //     .short("-t")
-        //     .long("--toggle")
-        //     .help("Skip menu & choose workspace 2 (default: false)"))
+        .arg(Arg::with_name("toggle")
+            .short("-t")
+            .long("--toggle")
+            .help("Skip menu & choose workspace 2 (default: false)"))
         // .arg(Arg::with_name("menu")
         //     .short("-m")
         //     .long("--menu")
@@ -76,25 +77,28 @@ fn main() {
         //     .help("Program used to render the menu"))
         .get_matches();
 
-    let mut menu_proc = Command::new("dmenu")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to execute process");
+    let title = if matches.is_present("toggle") {
+        workspaces.get_wp_with_number(2).unwrap().title()
+    } else {
+        let mut menu_proc = Command::new("dmenu")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to execute process");
+        {
+            let stdin = menu_proc.stdin.as_mut().expect("failed to get stdin");
+            stdin.write_all(workspaces.choices_str().as_bytes()).expect("failed to write to stdin");
+        }
+        let menu_output = menu_proc.wait_with_output().expect("failed to wait on process");
+        std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim().to_owned()
+    };
 
-    {
-        let stdin = menu_proc.stdin.as_mut().expect("failed to get stdin");
-        stdin.write_all(workspaces.choices_str().as_bytes()).expect("failed to write to stdin");
-    }
-
-    let menu_output = menu_proc.wait_with_output().expect("failed to wait on process");
-    let title = std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim();
 
     if matches.is_present("send_to") {
-        connection.send_to(title).expect("failed to send_to");
+        connection.send_to(&title).expect("failed to send_to");
     } else if matches.is_present("bring_to") {
-        connection.bring_to(title).expect("failed to bring_to");
+        connection.bring_to(&title).expect("failed to bring_to");
     } else {
-        connection.go_to(title).expect("failed to go_to");
+        connection.go_to(&title).expect("failed to go_to");
     };
 }

@@ -140,6 +140,7 @@ impl WorkspaceExt for Workspace {
 pub trait WorkspacesExt {
     fn choices_str(&self) -> String;
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
+    fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
 }
 
 impl WorkspacesExt for Workspaces {
@@ -158,6 +159,10 @@ impl WorkspacesExt for Workspaces {
 
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
         self.workspaces.iter().find(|wp| wp.title() == title)
+    }
+
+    fn get_wp_with_number(&self, number: usize) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.num == number as i32)
     }
 }
 
