@@ -10,7 +10,7 @@ use std::process::Command;
 use fluidspaces::WorkspacesExt;
 use fluidspaces::I3ConnectionExt;
 
-
+use fluidspaces::parse_title_from_name;
 
 
 fn main() {
@@ -23,19 +23,28 @@ fn main() {
     // println!("{:?}", workspaces.choices_str());
     // println!("{:?}", workspaces.gapless_rename_lists());
 
-    println!("{:?}", workspaces.get_wp_with_title("rust"));
+    // println!("{:?}", workspaces.get_wp_with_title("rust"));
     // println!("{:?}", workspaces.get_wp_with_title("foo"));
 
     // println!("{:?}", connection.promote_wp_title("rust"));
 
-    println!("{:?}", connection.go_to("rust"));
+    // println!("{:?}", connection.fixup_wps());
+
+    // println!("{:?}", connection.go_to("rust"));
     // println!("{:?}", connection.go_to("foo"));
 
     // println!("{:?}", connection.send_to("rust"));
-    // println!("{:?}", connection.send_to("foo"));
+    println!("{:?}", connection.send_to("foo"));
 
-    // println!("{:?}", connection.fixup_wps());
+    assert_eq!(parse_title_from_name("1:foo".as_bytes()).to_result().unwrap(), "foo");
+    assert_eq!(parse_title_from_name("1: foo".as_bytes()).to_result().unwrap(), "foo");
+    assert_eq!(parse_title_from_name("1 :foo".as_bytes()).to_result().unwrap(), "foo");
+    assert_eq!(parse_title_from_name("1 : foo".as_bytes()).to_result().unwrap(), "foo");
+    assert_eq!(parse_title_from_name("foo".as_bytes()).to_result().unwrap(), "foo");
+    assert_eq!(parse_title_from_name(":foo".as_bytes()).to_result().unwrap(), "foo");
+    // assert_eq!(parse_title_from_name("-1:foo".as_bytes()).to_result().unwrap(), "foo");
 
+    // println!("{:?}", parse_title_from_name("-1:foo".as_bytes()));
 
 
 

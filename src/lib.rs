@@ -21,7 +21,7 @@ pub trait I3ConnectionExt {
     fn fixup_wps(&mut self) -> Result<(), Error>;
 
     fn go_to(&mut self, title: &str) -> Result<(), Error>;
-    // fn send_to(&mut self, title: &str) -> Result<(), Error>;
+    fn send_to(&mut self, title: &str) -> Result<(), Error>;
     // fn bring_to(&mut self, title: &str) -> Result<(), Error>;
 }
 
@@ -55,11 +55,12 @@ impl I3ConnectionExt for I3Connection {
             // the old number is what this workspace was numbered before the fixup
             let old_num = match wp.num {
                 n if n >= 0 => n as usize,
-                _ => {
-                    return Err(failure::err_msg(
-                        format!("Unsupported: `{}` has negative number", wp.name),
-                    ))
-                }
+                // _ => {
+                //     return Err(failure::err_msg(
+                //         format!("Unsupported: `{}` has negative number", wp.name),
+                //     ))
+                // }
+                _ => 0,
             };
 
             // the new number is what this workspace will be numbered after the fixup
@@ -98,14 +99,28 @@ impl I3ConnectionExt for I3Connection {
         Ok(())
     }
 
-    // fn send_to(&mut self, title: &str) -> Result<(), Error> {
-    //
-    //     let (number, is_preexisting_wp) = match
-    //
-    //     let command_string = format!("to workspace {}:{}", number, title)
-    //
-    //     Err(String::from("implement I3ConnectionExt::send_to"))
-    // }
+    fn send_to(&mut self, title: &str) -> Result<(), Error> {
+        let wps = self.get_workspaces()?;
+        let (name, is_preexisting_wp) = match wps.get_wp_with_title(title) {
+            Some(wp) => (format!("{}:{}", wp.num, title), true),
+            None => (format!("{}", title), false),
+        };
+
+
+
+        // let foo = command_string;
+        // println!("{:?}", foo);
+
+        self.run_command(
+            &format!("move container to workspace {}", name),
+        )?;
+        if !is_preexisting_wp {
+            self.fixup_wps()?;
+        }
+        Ok(())
+
+        // Err(failure::err_msg("implement I3ConnectionExt::send_to"))
+    }
 
     // fn bring_to(&mut self, title: &str) -> Result<(), String> {
     //     Err(String::from("implement I3ConnectionExt::bring_to"))
@@ -119,8 +134,10 @@ pub trait WorkspaceExt {
 
 impl WorkspaceExt for Workspace {
     fn title(&self) -> String {
-        let (_, title) = name_parser(self.name.as_bytes()).to_result().unwrap();
-        String::from(title)
+        parse_title_from_name(self.name.as_bytes())
+            .to_result()
+            .unwrap()
+            .to_owned()
     }
 }
 
@@ -181,11 +198,13 @@ named!(title_parser<&str>,
     )
 );
 
-named!(name_parser<(usize, &str)>,
+named!(pub parse_title_from_name<&str>, dbg!(
     do_parse!(
-        number: ws!(usize_parser) >>
-        ws!(tag!(":")) >>
+        // opt!(take_while!(not!(nom::is_digit))) >>
+        // not!(ws!(usize_parser)) >>
+        opt!(ws!(usize_parser)) >>
+        opt!(ws!(tag!(":"))) >>
         title: ws!(title_parser) >>
-        (number, title)
+        (title)
     )
-);
+));
