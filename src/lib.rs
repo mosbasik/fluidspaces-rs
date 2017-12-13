@@ -9,11 +9,9 @@ use failure::Error;
 use i3ipc::reply::Workspaces;
 use i3ipc::reply::Workspace;
 use i3ipc::I3Connection;
-use i3ipc::MessageError;
+// use i3ipc::MessageError;
 
 use nom::{digit, rest};
-
-// use std::error::Error;
 
 
 pub trait I3ConnectionExt {
@@ -22,7 +20,7 @@ pub trait I3ConnectionExt {
 
     fn go_to(&mut self, title: &str) -> Result<(), Error>;
     fn send_to(&mut self, title: &str) -> Result<(), Error>;
-    // fn bring_to(&mut self, title: &str) -> Result<(), Error>;
+    fn bring_to(&mut self, title: &str) -> Result<(), Error>;
 }
 
 impl I3ConnectionExt for I3Connection {
@@ -55,11 +53,6 @@ impl I3ConnectionExt for I3Connection {
             // the old number is what this workspace was numbered before the fixup
             let old_num = match wp.num {
                 n if n >= 0 => n as usize,
-                // _ => {
-                //     return Err(failure::err_msg(
-                //         format!("Unsupported: `{}` has negative number", wp.name),
-                //     ))
-                // }
                 _ => 0,
             };
 
@@ -81,36 +74,16 @@ impl I3ConnectionExt for I3Connection {
         let command_string = command_vector.join("; ");
 
         // send the command string to i3 to be executed
-        // println!("running renames...", );
         command_vector.iter().for_each(|c| println!("`{}`", c));
         self.run_command(&command_string)?;
         Ok(())
     }
 
-    fn go_to(&mut self, title: &str) -> Result<(), Error> {
-        let (number, is_preexisting_wp) = match self.promote_wp_title(title) {
-            Ok(_) => (1, true),
-            Err(_) => (0, false),
-        };
-        self.run_command(&format!("workspace {}:{}", number, title))?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
-    }
-
     fn send_to(&mut self, title: &str) -> Result<(), Error> {
-        let wps = self.get_workspaces()?;
-        let (name, is_preexisting_wp) = match wps.get_wp_with_title(title) {
+        let (name, is_preexisting_wp) = match self.get_workspaces()?.get_wp_with_title(title) {
             Some(wp) => (format!("{}:{}", wp.num, title), true),
             None => (format!("{}", title), false),
         };
-
-
-
-        // let foo = command_string;
-        // println!("{:?}", foo);
-
         self.run_command(
             &format!("move container to workspace {}", name),
         )?;
@@ -118,13 +91,35 @@ impl I3ConnectionExt for I3Connection {
             self.fixup_wps()?;
         }
         Ok(())
-
-        // Err(failure::err_msg("implement I3ConnectionExt::send_to"))
     }
 
-    // fn bring_to(&mut self, title: &str) -> Result<(), String> {
-    //     Err(String::from("implement I3ConnectionExt::bring_to"))
-    // }
+    fn bring_to(&mut self, title: &str) -> Result<(), Error> {
+        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
+            Ok(_) => (format!("1:{}", title), true),
+            Err(_) => (format!("{}", title), false),
+        };
+        self.run_command(&format!(
+            "move container to workspace {}; workspace {}",
+            name,
+            name
+        ))?;
+        if !is_preexisting_wp {
+            self.fixup_wps()?;
+        }
+        Ok(())
+    }
+
+    fn go_to(&mut self, title: &str) -> Result<(), Error> {
+        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
+            Ok(_) => (format!("1:{}", title), true),
+            Err(_) => (format!("{}", title), false),
+        };
+        self.run_command(&format!("workspace {}", name))?;
+        if !is_preexisting_wp {
+            self.fixup_wps()?;
+        }
+        Ok(())
+    }
 }
 
 
@@ -158,7 +153,7 @@ impl WorkspacesExt for Workspaces {
             .iter()
             .map(|t| &*t.1)
             .collect::<Vec<&str>>()
-            .join(" ")
+            .join("\n")
     }
 
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
@@ -186,8 +181,6 @@ named!(title_parser<&str>,
 
 named!(pub parse_title_from_name<&str>, dbg!(
     do_parse!(
-        // opt!(take_while!(not!(nom::is_digit))) >>
-        // not!(ws!(usize_parser)) >>
         opt!(ws!(usize_parser)) >>
         opt!(ws!(tag!(":"))) >>
         title: ws!(title_parser) >>
