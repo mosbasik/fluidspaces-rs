@@ -11,6 +11,7 @@ doc = false
 clap = "2.29.0"
 unicode-segmentation = "1.2.0"
 nom = "3.2.1"
+failure = "0.1.1"
 
 [dependencies.i3ipc]
 version = "0.8.2"

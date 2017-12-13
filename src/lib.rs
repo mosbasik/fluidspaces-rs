@@ -1,11 +1,15 @@
+extern crate failure;
 extern crate i3ipc;
 #[macro_use]
 extern crate nom;
 extern crate unicode_segmentation;
 
+use failure::Error;
+
 use i3ipc::reply::Workspaces;
 use i3ipc::reply::Workspace;
 use i3ipc::I3Connection;
+use i3ipc::MessageError;
 
 use nom::{digit, rest};
 
@@ -13,53 +17,34 @@ use nom::{digit, rest};
 
 
 pub trait I3ConnectionExt {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), String>;
-    fn fixup_wps(&mut self) -> Result<(), String>;
+    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error>;
+    fn fixup_wps(&mut self) -> Result<(), Error>;
 
-    fn go_to(&self, title: &str) -> Result<(), String>;
-    fn send_to(&self, title: &str) -> Result<(), String>;
-    fn bring_to(&self, title: &str) -> Result<(), String>;
+    fn go_to(&mut self, title: &str) -> Result<(), Error>;
+    // fn send_to(&mut self, title: &str) -> Result<(), Error>;
+    // fn bring_to(&mut self, title: &str) -> Result<(), Error>;
 }
 
 impl I3ConnectionExt for I3Connection {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), String> {
-
-        let wps = match self.get_workspaces() {
-            Ok(workspaces) => workspaces.workspaces,
-            Err(_) => {
-                return Err(String::from(
-                    "Running get_workspaces() caused i3ipc to return an error",
-                ))
-            }
-        };
-
-        let wp = match wps.into_iter().find(|wp| wp.title() == title) {
-            Some(workspace) => workspace,
-            None => return Err(format!("No workspace with title \"{}\" found", title)),
-        };
-
-        let command_string = format!("rename workspace {} to 0:{}", wp.name, title);
-
-        match self.run_command(&command_string) {
-            Ok(_) => self.fixup_wps(),
-            Err(_) => Err(format!(
-                "Running the command `{}` caused i3ipc to return an error",
-                command_string
-            )),
-        }
+    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error> {
+        let wp_name = self.get_workspaces()?
+            .get_wp_with_title(title)
+            .ok_or(failure::err_msg(
+                format!("No workspace with title \"{}\" found", title),
+            ))?
+            .name
+            .clone();
+        let command_string = format!("rename workspace {} to 0:{}", wp_name, title);
+        println!("`{}`", &command_string);
+        self.run_command(&command_string)?;
+        self.fixup_wps()?;
+        Ok(())
     }
 
-    fn fixup_wps(&mut self) -> Result<(), String> {
+    fn fixup_wps(&mut self) -> Result<(), Error> {
 
         // get the the current list of workspaces from i3
-        let wps = match self.get_workspaces() {
-            Ok(workspaces) => workspaces.workspaces,
-            Err(_) => {
-                return Err(String::from(
-                    "Running get_workspaces() caused i3ipc to return an error",
-                ))
-            }
-        };
+        let wps = self.get_workspaces()?.workspaces;
 
         // initialize a vector to accumulate all of the commands the fixup requires, so they can be
         // joined together at the end and sent to i3 as a single operation
@@ -70,7 +55,11 @@ impl I3ConnectionExt for I3Connection {
             // the old number is what this workspace was numbered before the fixup
             let old_num = match wp.num {
                 n if n >= 0 => n as usize,
-                _ => return Err(format!("Unsupported: `{}` has negative number", wp.name)),
+                _ => {
+                    return Err(failure::err_msg(
+                        format!("Unsupported: `{}` has negative number", wp.name),
+                    ))
+                }
             };
 
             // the new number is what this workspace will be numbered after the fixup
@@ -90,29 +79,37 @@ impl I3ConnectionExt for I3Connection {
         // join the command vector into a single command string for i3 to execute (atomically?)
         let command_string = command_vector.join("; ");
 
-        println!("{:?}", command_vector.join("; "));
-
         // send the command string to i3 to be executed
-        match self.run_command(&command_string) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(format!(
-                "Running the command `{}` caused i3ipc to return an error",
-                command_string
-            )),
+        // println!("running renames...", );
+        command_vector.iter().for_each(|c| println!("`{}`", c));
+        self.run_command(&command_string)?;
+        Ok(())
+    }
+
+    fn go_to(&mut self, title: &str) -> Result<(), Error> {
+        let (number, is_preexisting_wp) = match self.promote_wp_title(title) {
+            Ok(_) => (1, true),
+            Err(_) => (0, false),
+        };
+        self.run_command(&format!("workspace {}:{}", number, title))?;
+        if !is_preexisting_wp {
+            self.fixup_wps()?;
         }
+        Ok(())
     }
 
-    fn go_to(&self, title: &str) -> Result<(), String> {
-        Err(String::from("implement I3ConnectionExt::go_to"))
-    }
+    // fn send_to(&mut self, title: &str) -> Result<(), Error> {
+    //
+    //     let (number, is_preexisting_wp) = match
+    //
+    //     let command_string = format!("to workspace {}:{}", number, title)
+    //
+    //     Err(String::from("implement I3ConnectionExt::send_to"))
+    // }
 
-    fn send_to(&self, title: &str) -> Result<(), String> {
-        Err(String::from("implement I3ConnectionExt::send_to"))
-    }
-
-    fn bring_to(&self, title: &str) -> Result<(), String> {
-        Err(String::from("implement I3ConnectionExt::bring_to"))
-    }
+    // fn bring_to(&mut self, title: &str) -> Result<(), String> {
+    //     Err(String::from("implement I3ConnectionExt::bring_to"))
+    // }
 }
 
 
@@ -131,6 +128,7 @@ impl WorkspaceExt for Workspace {
 pub trait WorkspacesExt {
     fn choices_str(&self) -> String;
     fn gapless_rename_lists(&self) -> (Vec<String>, Vec<String>);
+    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
 }
 
 impl WorkspacesExt for Workspaces {
@@ -158,6 +156,10 @@ impl WorkspacesExt for Workspaces {
             }
         }
         (old_i3_names, new_i3_names)
+    }
+
+    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.title() == title)
     }
 }
 

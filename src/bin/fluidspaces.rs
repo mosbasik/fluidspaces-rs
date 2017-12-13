@@ -7,7 +7,7 @@ use i3ipc::I3Connection;
 // use i3ipc::reply::{Workspace, Workspaces};
 use std::process::Command;
 
-// use fluidspaces::WorkspacesExt
+use fluidspaces::WorkspacesExt;
 use fluidspaces::I3ConnectionExt;
 
 
@@ -18,11 +18,22 @@ fn main() {
     // establish a connection to i3 over a unix socket
     let mut connection = I3Connection::connect().unwrap();
 
-    // let workspaces = connection.get_workspaces().unwrap();
+    let workspaces = connection.get_workspaces().unwrap();
 
     // println!("{:?}", workspaces.choices_str());
     // println!("{:?}", workspaces.gapless_rename_lists());
-    println!("{:?}", connection.promote_wp_title("rust"));
+
+    println!("{:?}", workspaces.get_wp_with_title("rust"));
+    // println!("{:?}", workspaces.get_wp_with_title("foo"));
+
+    // println!("{:?}", connection.promote_wp_title("rust"));
+
+    println!("{:?}", connection.go_to("rust"));
+    // println!("{:?}", connection.go_to("foo"));
+
+    // println!("{:?}", connection.send_to("rust"));
+    // println!("{:?}", connection.send_to("foo"));
+
     // println!("{:?}", connection.fixup_wps());
 
 
