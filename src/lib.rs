@@ -144,7 +144,6 @@ impl WorkspaceExt for Workspace {
 
 pub trait WorkspacesExt {
     fn choices_str(&self) -> String;
-    fn gapless_rename_lists(&self) -> (Vec<String>, Vec<String>);
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
 }
 
@@ -160,19 +159,6 @@ impl WorkspacesExt for Workspaces {
             .map(|t| &*t.1)
             .collect::<Vec<&str>>()
             .join(" ")
-    }
-
-    fn gapless_rename_lists(&self) -> (Vec<String>, Vec<String>) {
-        let mut old_i3_names: Vec<String> = Vec::new();
-        let mut new_i3_names: Vec<String> = Vec::new();
-        for (gapless_num, wp) in self.workspaces.iter().enumerate() {
-            let gapless_i3_name = format!("{}:{}", gapless_num + 1, wp.title());
-            if gapless_i3_name != wp.name {
-                old_i3_names.push(wp.name.clone());
-                new_i3_names.push(gapless_i3_name.clone());
-            }
-        }
-        (old_i3_names, new_i3_names)
     }
 
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
