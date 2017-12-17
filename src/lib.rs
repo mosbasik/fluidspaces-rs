@@ -126,17 +126,6 @@ impl I3ConnectionExt for I3Connection {
 }
 
 
-pub trait WorkspaceExt {
-    fn title<'a>(&'a self) -> &'a str;
-}
-
-impl WorkspaceExt for Workspace {
-    fn title<'a>(&'a self) -> &'a str {
-        title_from_name(&self.name)
-    }
-}
-
-
 pub trait WorkspacesExt {
     fn choices_str(&self) -> String;
     fn get_wp_with_name(&self, name: &str) -> Option<&Workspace>;
@@ -168,6 +157,17 @@ impl WorkspacesExt for Workspaces {
 
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace> {
         self.workspaces.iter().find(|wp| wp.num == number as i32)
+    }
+}
+
+
+pub trait WorkspaceExt {
+    fn title<'a>(&'a self) -> &'a str;
+}
+
+impl WorkspaceExt for Workspace {
+    fn title<'a>(&'a self) -> &'a str {
+        title_from_name(&self.name)
     }
 }
 
