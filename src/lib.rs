@@ -9,59 +9,44 @@ use failure::Error;
 use i3ipc::reply::Workspaces;
 use i3ipc::reply::Workspace;
 use i3ipc::I3Connection;
-// use i3ipc::MessageError;
 
 use nom::{digit, rest};
 
 
 pub trait I3ConnectionExt {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error>;
-    fn fixup_wps(&mut self) -> Result<(), Error>;
-
-    fn go_to(&mut self, title: &str) -> Result<(), Error>;
-    fn send_to(&mut self, title: &str) -> Result<(), Error>;
-    fn bring_to(&mut self, title: &str) -> Result<(), Error>;
+    fn run_commands(&mut self, cmds: &[String]) -> Result<(), Error>;
 }
 
 impl I3ConnectionExt for I3Connection {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error> {
-        let wp_name = self.get_workspaces()?
-            .get_wp_with_title(title)
-            .ok_or(failure::err_msg(
-                format!("No workspace with title \"{}\" found", title),
-            ))?
-            .name
-            .clone();
-        let command_string = format!("rename workspace {} to 0:{}", wp_name, title);
-        println!("`{}`", &command_string);
-        self.run_command(&command_string)?;
-        self.fixup_wps()?;
+    fn run_commands(&mut self, cmds: &[String]) -> Result<(), Error> {
+        cmds.iter().for_each(|c| println!("`{}`", c));
+        self.run_command(&cmds.join("; "))?;
         Ok(())
     }
+}
 
-    fn fixup_wps(&mut self) -> Result<(), Error> {
 
-        // get the the current list of workspaces from i3
-        let wps = self.get_workspaces()?.workspaces;
+pub trait WorkspacesExt {
+    fn fixup_wps(&self) -> Vec<String>;
+    fn choices_str(&self) -> String;
 
-        // initialize a vector to accumulate all of the commands the fixup requires, so they can be
-        // joined together at the end and sent to i3 as a single operation
-        let mut command_vector: Vec<String> = Vec::new();
+    fn get_wp_with_focus(&self) -> Option<&Workspace>;
+    fn get_wp_with_name(&self, name: &str) -> Option<&Workspace>;
+    fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
+    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
 
-        for (i, wp) in wps.iter().enumerate() {
+    fn go_to(&self, name: &str) -> String;
+    fn send_to(&self, name: &str) -> String;
+}
 
-            // the old number is what this workspace was numbered before the fixup
-            let old_num = match wp.num {
-                n if n >= 0 => n as usize,
-                _ => 0,
-            };
-
-            // the new number is what this workspace will be numbered after the fixup
+impl WorkspacesExt for Workspaces {
+    fn fixup_wps(&self) -> Vec<String> {
+        let mut cmds: Vec<String> = vec![];
+        for (i, wp) in self.workspaces.iter().enumerate() {
+            let old_num = if wp.num >= 0 { wp.num as usize } else { 0 };
             let new_num = i + 1;
-
-            // if the old and new numbers don't match, add a "rename" command to the vector
             if old_num != new_num {
-                command_vector.push(format!(
+                cmds.push(format!(
                     "rename workspace {} to {}:{}",
                     wp.name,
                     new_num,
@@ -69,83 +54,11 @@ impl I3ConnectionExt for I3Connection {
                 ));
             }
         }
-
-        // join the command vector into a single command string for i3 to execute (atomically?)
-        let command_string = command_vector.join("; ");
-
-        // send the command string to i3 to be executed
-        command_vector.iter().for_each(|c| println!("`{}`", c));
-        self.run_command(&command_string)?;
-        Ok(())
+        cmds
     }
 
-    fn send_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.get_workspaces()?.get_wp_with_title(title) {
-            Some(wp) => (format!("{}:{}", wp.num, title), true),
-            None => (format!("{}", title), false),
-        };
-        self.run_command(
-            &format!("move container to workspace {}", name),
-        )?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
-    }
-
-    fn bring_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
-            Ok(_) => (format!("1:{}", title), true),
-            Err(_) => (format!("{}", title), false),
-        };
-        self.run_command(&format!(
-            "move container to workspace {}; workspace {}",
-            name,
-            name
-        ))?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
-    }
-
-    fn go_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
-            Ok(_) => (format!("1:{}", title), true),
-            Err(_) => (format!("{}", title), false),
-        };
-        self.run_command(&format!("workspace {}", name))?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
-    }
-}
-
-
-pub trait WorkspaceExt {
-    fn title(&self) -> String;
-}
-
-impl WorkspaceExt for Workspace {
-    fn title(&self) -> String {
-        parse_title_from_name(self.name.as_bytes())
-            .to_result()
-            .unwrap()
-            .to_owned()
-    }
-}
-
-
-pub trait WorkspacesExt {
-    fn choices_str(&self) -> String;
-    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
-    fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
-}
-
-impl WorkspacesExt for Workspaces {
     fn choices_str(&self) -> String {
-        let mut numbered_titles: Vec<(usize, String)> = self.workspaces
+        let mut numbered_titles: Vec<(usize, &str)> = self.workspaces
             .iter()
             .map(|wp| (wp.num as usize, wp.title()))
             .collect();
@@ -157,12 +70,50 @@ impl WorkspacesExt for Workspaces {
             .join("\n")
     }
 
-    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
-        self.workspaces.iter().find(|wp| wp.title() == title)
+    fn get_wp_with_focus(&self) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.focused == true)
+    }
+
+    fn get_wp_with_name(&self, name: &str) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.name == name)
     }
 
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace> {
         self.workspaces.iter().find(|wp| wp.num == number as i32)
+    }
+
+    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.title() == title)
+    }
+
+    fn go_to(&self, name: &str) -> String {
+        match self.get_wp_with_name(&name) {
+            Some(_) => format!("workspace {}", name),
+            None => format!("workspace {}", title_from_name(name)),
+        }
+    }
+
+    fn send_to(&self, name: &str) -> String {
+        match self.get_wp_with_name(&name) {
+            Some(_) => format!("move container to workspace {}", name),
+            None => format!("move container to workspace {}", title_from_name(name)),
+        }
+    }
+}
+
+
+pub trait WorkspaceExt {
+    fn promote(&self) -> String;
+    fn title<'a>(&'a self) -> &'a str;
+}
+
+impl WorkspaceExt for Workspace {
+    fn promote(&self) -> String {
+        format!("rename workspace {} to 0:{}", self.name, self.title())
+    }
+
+    fn title<'a>(&'a self) -> &'a str {
+        title_from_name(&self.name)
     }
 }
 
@@ -192,3 +143,7 @@ named!(pub parse_title_from_name<&str>, dbg!(
         (title)
     )
 ));
+
+fn title_from_name<'a>(name: &'a str) -> &'a str {
+    parse_title_from_name(name.as_bytes()).to_result().unwrap()
+}

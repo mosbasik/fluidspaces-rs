@@ -69,6 +69,12 @@ fn main() {
             .short("-t")
             .long("--toggle")
             .help("Skip menu & choose workspace 2 (default: false)"))
+        .arg(Arg::with_name("order")
+            .short("-o")
+            .long("--order")
+            .possible_values(&["default", "last-used"])
+            .default_value("default")
+            .help("Method used to determine workspace display order"))
         // .arg(Arg::with_name("menu")
         //     .short("-m")
         //     .long("--menu")
@@ -77,8 +83,8 @@ fn main() {
         //     .help("Program used to render the menu"))
         .get_matches();
 
-    let title = if matches.is_present("toggle") {
-        workspaces.get_wp_with_number(2).unwrap().title()
+    let target = if matches.is_present("toggle") {
+        workspaces.get_wp_with_number(2).unwrap().name.clone()
     } else {
         let mut menu_proc = Command::new("dmenu")
             .stdin(Stdio::piped())
@@ -90,15 +96,32 @@ fn main() {
             stdin.write_all(workspaces.choices_str().as_bytes()).expect("failed to write to stdin");
         }
         let menu_output = menu_proc.wait_with_output().expect("failed to wait on process");
-        std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim().to_owned()
+        let title = std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim();
+        match workspaces.get_wp_with_title(title) {
+            Some(wp) => wp.name.clone(),
+            None => title.to_owned(),
+        }
     };
 
-
+    let mut action_cmds: Vec<String> = vec![];
     if matches.is_present("send_to") {
-        connection.send_to(&title).expect("failed to send_to");
+        action_cmds.push(workspaces.send_to(&target));
     } else if matches.is_present("bring_to") {
-        connection.bring_to(&title).expect("failed to bring_to");
+        action_cmds.push(workspaces.send_to(&target));
+        action_cmds.push(workspaces.go_to(&target));
     } else {
-        connection.go_to(&title).expect("failed to go_to");
+        action_cmds.push(workspaces.go_to(&target));
     };
+    connection.run_commands(&action_cmds).expect("running generated commands failed");
+
+    if matches.value_of("order").unwrap() == "last-used" {
+        let promote_cmds = match connection.get_workspaces().expect("failed to get workspaces").get_wp_with_focus() {
+            Some(wp) => vec![wp.promote()],
+            None => vec![],
+        };
+        connection.run_commands(&promote_cmds).expect("running generated commands failed");
+    }
+
+    let fixup_cmds = connection.get_workspaces().expect("failed to get workspaces").fixup_wps();
+    connection.run_commands(&fixup_cmds).expect("running generated commands failed");
 }
