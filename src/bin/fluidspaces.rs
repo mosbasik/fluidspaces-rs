@@ -69,6 +69,12 @@ fn main() {
             .short("-t")
             .long("--toggle")
             .help("Skip menu & choose workspace 2 (default: false)"))
+        .arg(Arg::with_name("order")
+            .short("-o")
+            .long("--order")
+            .possible_values(&["default", "last-used"])
+            .default_value("last-used")
+            .help("Method used to determine workspace display order"))
         // .arg(Arg::with_name("menu")
         //     .short("-m")
         //     .long("--menu")
@@ -77,8 +83,8 @@ fn main() {
         //     .help("Program used to render the menu"))
         .get_matches();
 
-    let title = if matches.is_present("toggle") {
-        workspaces.get_wp_with_number(2).unwrap().title()
+    let target = if matches.is_present("toggle") {
+        workspaces.get_wp_with_number(2).unwrap().name.clone()
     } else {
         let mut menu_proc = Command::new("dmenu")
             .stdin(Stdio::piped())
@@ -90,15 +96,36 @@ fn main() {
             stdin.write_all(workspaces.choices_str().as_bytes()).expect("failed to write to stdin");
         }
         let menu_output = menu_proc.wait_with_output().expect("failed to wait on process");
-        std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim().to_owned()
+        let title = std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim();
+        match connection.name_from_title(title) {
+            Ok(name) => name,
+            Err(_) => title.to_owned(),
+        }
     };
 
-
-    if matches.is_present("send_to") {
-        connection.send_to(&title).expect("failed to send_to");
+    let action = if matches.is_present("send_to") {
+        "send_to"
     } else if matches.is_present("bring_to") {
-        connection.bring_to(&title).expect("failed to bring_to");
+        "bring_to"
     } else {
-        connection.go_to(&title).expect("failed to go_to");
+        "go_to"
     };
+
+    let mut cmds: Vec<String> = vec![];
+
+    match action {
+        "go_to" => {
+            cmds.extend(connection.go_to(&target).expect("generating go_to commands failed").into_iter());
+        },
+        "send_to" => {
+            cmds.extend(connection.send_to(&target).expect("generating send_to commands failed").into_iter());
+        },
+        "bring_to" => {
+            cmds.extend(connection.send_to(&target).expect("generating send_to commands failed").into_iter());
+            cmds.extend(connection.go_to(&target).expect("generating go_to commands failed").into_iter());
+        },
+        _ => panic!("invalid action code detected"),
+    }
+
+    connection.run_commands(&cmds).expect("running generated commands failed");
 }

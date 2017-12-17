@@ -15,28 +15,50 @@ use nom::{digit, rest};
 
 
 pub trait I3ConnectionExt {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error>;
+    fn run_commands(&mut self, cmds: &[String]) -> Result<(), Error>;
+
+    fn promote_wp(&mut self, name: &str, title: &str) -> Result<(), Error>;
+    fn wp_with_name_exists(&mut self, name: &str) -> Result<bool, Error>;
+
+    fn name_from_title(&mut self, title: &str) -> Result<String, Error>;
+
     fn fixup_wps(&mut self) -> Result<(), Error>;
 
-    fn go_to(&mut self, title: &str) -> Result<(), Error>;
-    fn send_to(&mut self, title: &str) -> Result<(), Error>;
-    fn bring_to(&mut self, title: &str) -> Result<(), Error>;
+    fn go_to(&mut self, title: &str) -> Result<Vec<String>, Error>;
+    fn send_to(&mut self, title: &str) -> Result<Vec<String>, Error>;
+    fn bring_to(&mut self, title: &str) -> Result<Vec<String>, Error>;
 }
 
 impl I3ConnectionExt for I3Connection {
-    fn promote_wp_title(&mut self, title: &str) -> Result<(), Error> {
-        let wp_name = self.get_workspaces()?
+    fn run_cmds(&mut self, cmds: &[String]) -> Result<(), Error> {
+        self.run_command(&cmds.join("; "))?;
+        Ok(())
+    }
+
+    fn promote_wp(&mut self, name: &str, title: &str) -> Result<(), Error> {
+        self.run_command(
+            &format!("rename workspace {} to 0:{}", name, title),
+        )?;
+        self.fixup_wps()?;
+        Ok(())
+    }
+
+    fn name_from_title(&mut self, title: &str) -> Result<String, Error> {
+        let name = self.get_workspaces()?
             .get_wp_with_title(title)
             .ok_or(failure::err_msg(
                 format!("No workspace with title \"{}\" found", title),
             ))?
             .name
             .clone();
-        let command_string = format!("rename workspace {} to 0:{}", wp_name, title);
-        println!("`{}`", &command_string);
-        self.run_command(&command_string)?;
-        self.fixup_wps()?;
-        Ok(())
+        Ok(name)
+    }
+
+    fn wp_with_name_exists(&mut self, name: &str) -> Result<bool, Error> {
+        match self.get_workspaces()?.get_wp_with_name(name) {
+            Some(_) => Ok(true),
+            None => Ok(false),
+        }
     }
 
     fn fixup_wps(&mut self) -> Result<(), Error> {
@@ -79,73 +101,52 @@ impl I3ConnectionExt for I3Connection {
         Ok(())
     }
 
-    fn send_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.get_workspaces()?.get_wp_with_title(title) {
-            Some(wp) => (format!("{}:{}", wp.num, title), true),
-            None => (format!("{}", title), false),
+    fn send_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
+        let target = match self.wp_with_name_exists(name)? {
+            true => name,
+            false => title_from_name(name),
         };
-        self.run_command(
-            &format!("move container to workspace {}", name),
-        )?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
+        Ok(vec![format!("move container to workspace {}", target)])
     }
 
-    fn bring_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
-            Ok(_) => (format!("1:{}", title), true),
-            Err(_) => (format!("{}", title), false),
-        };
-        self.run_command(&format!(
-            "move container to workspace {}; workspace {}",
-            name,
-            name
-        ))?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
+    fn bring_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
+        let mut result = vec![];
+        result.extend(self.send_to(name)?.into_iter());
+        result.extend(self.go_to(name)?.into_iter());
+        Ok(result)
     }
 
-    fn go_to(&mut self, title: &str) -> Result<(), Error> {
-        let (name, is_preexisting_wp) = match self.promote_wp_title(title) {
-            Ok(_) => (format!("1:{}", title), true),
-            Err(_) => (format!("{}", title), false),
+    fn go_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
+        let target = match self.wp_with_name_exists(name)? {
+            true => name,
+            false => title_from_name(name),
         };
-        self.run_command(&format!("workspace {}", name))?;
-        if !is_preexisting_wp {
-            self.fixup_wps()?;
-        }
-        Ok(())
+        Ok(vec![format!("workspace {}", target)])
     }
 }
 
 
 pub trait WorkspaceExt {
-    fn title(&self) -> String;
+    fn title<'a>(&'a self) -> &'a str;
 }
 
 impl WorkspaceExt for Workspace {
-    fn title(&self) -> String {
-        parse_title_from_name(self.name.as_bytes())
-            .to_result()
-            .unwrap()
-            .to_owned()
+    fn title<'a>(&'a self) -> &'a str {
+        title_from_name(&self.name)
     }
 }
 
 
 pub trait WorkspacesExt {
     fn choices_str(&self) -> String;
-    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
+    fn get_wp_with_name(&self, name: &str) -> Option<&Workspace>;
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
+    fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
 }
 
 impl WorkspacesExt for Workspaces {
     fn choices_str(&self) -> String {
-        let mut numbered_titles: Vec<(usize, String)> = self.workspaces
+        let mut numbered_titles: Vec<(usize, &str)> = self.workspaces
             .iter()
             .map(|wp| (wp.num as usize, wp.title()))
             .collect();
@@ -155,6 +156,10 @@ impl WorkspacesExt for Workspaces {
             .map(|t| &*t.1)
             .collect::<Vec<&str>>()
             .join("\n")
+    }
+
+    fn get_wp_with_name(&self, name: &str) -> Option<&Workspace> {
+        self.workspaces.iter().find(|wp| wp.name == name)
     }
 
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
@@ -192,3 +197,7 @@ named!(pub parse_title_from_name<&str>, dbg!(
         (title)
     )
 ));
+
+fn title_from_name<'a>(name: &'a str) -> &'a str {
+    parse_title_from_name(name.as_bytes()).to_result().unwrap()
+}
