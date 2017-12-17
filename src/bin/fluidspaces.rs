@@ -73,7 +73,7 @@ fn main() {
             .short("-o")
             .long("--order")
             .possible_values(&["default", "last-used"])
-            .default_value("last-used")
+            .default_value("default")
             .help("Method used to determine workspace display order"))
         // .arg(Arg::with_name("menu")
         //     .short("-m")
@@ -114,11 +114,13 @@ fn main() {
     };
     connection.run_commands(&action_cmds).expect("running generated commands failed");
 
-    let promote_cmds = match connection.get_workspaces().expect("failed to get workspaces").get_wp_with_focus() {
-        Some(wp) => vec![wp.promote()],
-        None => vec![],
-    };
-    connection.run_commands(&promote_cmds).expect("running generated commands failed");
+    if matches.value_of("order").unwrap() == "last-used" {
+        let promote_cmds = match connection.get_workspaces().expect("failed to get workspaces").get_wp_with_focus() {
+            Some(wp) => vec![wp.promote()],
+            None => vec![],
+        };
+        connection.run_commands(&promote_cmds).expect("running generated commands failed");
+    }
 
     let fixup_cmds = connection.get_workspaces().expect("failed to get workspaces").fixup_wps();
     connection.run_commands(&fixup_cmds).expect("running generated commands failed");
