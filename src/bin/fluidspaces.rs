@@ -97,35 +97,29 @@ fn main() {
         }
         let menu_output = menu_proc.wait_with_output().expect("failed to wait on process");
         let title = std::str::from_utf8(menu_output.stdout.as_slice()).expect("failed to parse stdout").trim();
-        match connection.name_from_title(title) {
-            Ok(name) => name,
-            Err(_) => title.to_owned(),
+        match workspaces.get_wp_with_title(title) {
+            Some(wp) => wp.name.clone(),
+            None => title.to_owned(),
         }
     };
 
-    let action = if matches.is_present("send_to") {
-        "send_to"
+    let mut action_cmds: Vec<String> = vec![];
+    if matches.is_present("send_to") {
+        action_cmds.push(workspaces.send_to(&target));
     } else if matches.is_present("bring_to") {
-        "bring_to"
+        action_cmds.push(workspaces.send_to(&target));
+        action_cmds.push(workspaces.go_to(&target));
     } else {
-        "go_to"
+        action_cmds.push(workspaces.go_to(&target));
     };
+    connection.run_commands(&action_cmds).expect("running generated commands failed");
 
-    let mut cmds: Vec<String> = vec![];
+    let promote_cmds = match connection.get_workspaces().expect("failed to get workspaces").get_wp_with_focus() {
+        Some(wp) => vec![wp.promote()],
+        None => vec![],
+    };
+    connection.run_commands(&promote_cmds).expect("running generated commands failed");
 
-    match action {
-        "go_to" => {
-            cmds.extend(connection.go_to(&target).expect("generating go_to commands failed").into_iter());
-        },
-        "send_to" => {
-            cmds.extend(connection.send_to(&target).expect("generating send_to commands failed").into_iter());
-        },
-        "bring_to" => {
-            cmds.extend(connection.send_to(&target).expect("generating send_to commands failed").into_iter());
-            cmds.extend(connection.go_to(&target).expect("generating go_to commands failed").into_iter());
-        },
-        _ => panic!("invalid action code detected"),
-    }
-
-    connection.run_commands(&cmds).expect("running generated commands failed");
+    let fixup_cmds = connection.get_workspaces().expect("failed to get workspaces").fixup_wps();
+    connection.run_commands(&fixup_cmds).expect("running generated commands failed");
 }
