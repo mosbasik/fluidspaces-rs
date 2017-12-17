@@ -101,6 +101,14 @@ impl I3ConnectionExt for I3Connection {
         Ok(())
     }
 
+    fn go_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
+        let target = match self.wp_with_name_exists(name)? {
+            true => name,
+            false => title_from_name(name),
+        };
+        Ok(vec![format!("workspace {}", target)])
+    }
+
     fn send_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
         let target = match self.wp_with_name_exists(name)? {
             true => name,
@@ -114,14 +122,6 @@ impl I3ConnectionExt for I3Connection {
         result.extend(self.send_to(name)?.into_iter());
         result.extend(self.go_to(name)?.into_iter());
         Ok(result)
-    }
-
-    fn go_to(&mut self, name: &str) -> Result<Vec<String>, Error> {
-        let target = match self.wp_with_name_exists(name)? {
-            true => name,
-            false => title_from_name(name),
-        };
-        Ok(vec![format!("workspace {}", target)])
     }
 }
 
