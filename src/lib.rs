@@ -5,6 +5,7 @@ extern crate nom;
 extern crate unicode_segmentation;
 
 use failure::Error;
+use failure::err_msg;
 
 use i3ipc::reply::Workspaces;
 use i3ipc::reply::Workspace;
@@ -35,8 +36,8 @@ pub trait WorkspacesExt {
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
 
-    fn go_to(&self, name: &str) -> String;
-    fn send_to(&self, name: &str) -> String;
+    fn go_to(&self, name: &str) -> Result<String, Error>;
+    fn send_to(&self, name: &str) -> Result<String, Error>;
 }
 
 impl WorkspacesExt for Workspaces {
@@ -86,18 +87,20 @@ impl WorkspacesExt for Workspaces {
         self.workspaces.iter().find(|wp| wp.title() == title)
     }
 
-    fn go_to(&self, name: &str) -> String {
-        match self.get_wp_with_name(&name) {
+    fn go_to(&self, name: &str) -> Result<String, Error> {
+        let command = match self.get_wp_with_name(&name) {
             Some(_) => format!("workspace {}", name),
-            None => format!("workspace {}", title_from_name(name)),
-        }
+            None => format!("workspace {}", title_from_name(name)?),
+        };
+        Ok(command)
     }
 
-    fn send_to(&self, name: &str) -> String {
-        match self.get_wp_with_name(&name) {
+    fn send_to(&self, name: &str) -> Result<String, Error> {
+        let command = match self.get_wp_with_name(&name) {
             Some(_) => format!("move container to workspace {}", name),
-            None => format!("move container to workspace {}", title_from_name(name)),
-        }
+            None => format!("move container to workspace {}", title_from_name(name)?),
+        };
+        Ok(command)
     }
 }
 
@@ -113,7 +116,7 @@ impl WorkspaceExt for Workspace {
     }
 
     fn title<'a>(&'a self) -> &'a str {
-        title_from_name(&self.name)
+        title_from_name(&self.name).unwrap()
     }
 }
 
@@ -144,6 +147,11 @@ named!(pub parse_title_from_name<&str>, dbg!(
     )
 ));
 
-fn title_from_name<'a>(name: &'a str) -> &'a str {
-    parse_title_from_name(name.as_bytes()).to_result().unwrap()
+fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
+    match parse_title_from_name(name.as_bytes()).to_full_result() {
+        Ok(title) => Ok(title),
+        Err(e) => Err(err_msg(
+            format!("Couldn't parse title from name {:?}: {:?}", name, e),
+        )),
+    }
 }
