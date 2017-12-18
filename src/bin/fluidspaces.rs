@@ -134,6 +134,12 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
             let raw_title = String::from_utf8_lossy(&menu_output.stdout[..]);
             let title = raw_title.trim();
 
+            // check to see if the user actually chose a target; if they didn't then we don't need
+            // to do anything else and can return early
+            if title == "" {
+                return Ok(());
+            }
+
             // the target is either the full workspace name (if a workspace exists with
             // a name that matches the chosen title) or the chosen title itself (if a
             // workspace with a matching name doesn't exist)
