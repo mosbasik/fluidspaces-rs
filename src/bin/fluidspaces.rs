@@ -152,11 +152,11 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
     // push command strings into the vector according to the requested action
     match message.as_str() {
-        "go_to" | "toggle" => action_cmds.push(workspaces.go_to(&target)),
-        "send_to" => action_cmds.push(workspaces.send_to(&target)),
+        "go_to" | "toggle" => action_cmds.push(workspaces.go_to(&target)?),
+        "send_to" => action_cmds.push(workspaces.send_to(&target)?),
         "bring_to" => {
-            action_cmds.push(workspaces.send_to(&target));
-            action_cmds.push(workspaces.go_to(&target));
+            action_cmds.push(workspaces.send_to(&target)?);
+            action_cmds.push(workspaces.go_to(&target)?);
         }
         _ => panic!(),  // shouldn't happen
     }
