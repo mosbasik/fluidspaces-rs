@@ -37,7 +37,10 @@ use fluidspaces::I3ConnectionExt;
 fn main() {
 
     // establish connection with i3 IPC socket
-    let mut i3 = I3Connection::connect().unwrap();
+    let mut i3 = match I3Connection::connect() {
+        Ok(connection) => connection,
+        Err(e) => panic!("Couldn't connect to i3: {:?}", e),
+    };
 
     // define filename for fluidspaces IPC socket
     let socket_filename = "/tmp/fluidspaces.sock";
