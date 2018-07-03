@@ -48,7 +48,7 @@ impl WorkspacesExt for Workspaces {
             let new_num = i + 1;
             if old_num != new_num {
                 cmds.push(format!(
-                    "rename workspace {} to {}:{}",
+                    "rename workspace \"{}\" to \"{}:{}\"",
                     wp.name,
                     new_num,
                     wp.title()
@@ -89,16 +89,16 @@ impl WorkspacesExt for Workspaces {
 
     fn go_to(&self, name: &str) -> Result<String, Error> {
         let command = match self.get_wp_with_name(&name) {
-            Some(_) => format!("workspace {}", name),
-            None => format!("workspace {}", title_from_name(name)?),
+            Some(_) => format!("workspace \"{}\"", name),
+            None => format!("workspace \"{}\"", title_from_name(name)?),
         };
         Ok(command)
     }
 
     fn send_to(&self, name: &str) -> Result<String, Error> {
         let command = match self.get_wp_with_name(&name) {
-            Some(_) => format!("move container to workspace {}", name),
-            None => format!("move container to workspace {}", title_from_name(name)?),
+            Some(_) => format!("move container to workspace \"{}\"", name),
+            None => format!("move container to workspace \"{}\"", title_from_name(name)?),
         };
         Ok(command)
     }
@@ -112,7 +112,7 @@ pub trait WorkspaceExt {
 
 impl WorkspaceExt for Workspace {
     fn promote(&self) -> String {
-        format!("rename workspace {} to 0:{}", self.name, self.title())
+        format!("rename workspace \"{}\" to \"0:{}\"", self.name, self.title())
     }
 
     fn title<'a>(&'a self) -> &'a str {
