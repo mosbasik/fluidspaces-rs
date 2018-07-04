@@ -35,9 +35,6 @@ pub trait WorkspacesExt {
     fn get_wp_with_name(&self, name: &str) -> Option<&Workspace>;
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
-
-    fn go_to(&self, name: &str) -> Result<String, Error>;
-    fn send_to(&self, name: &str) -> Result<String, Error>;
 }
 
 impl WorkspacesExt for Workspaces {
@@ -86,22 +83,6 @@ impl WorkspacesExt for Workspaces {
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
         self.workspaces.iter().find(|wp| wp.title() == title)
     }
-
-    fn go_to(&self, name: &str) -> Result<String, Error> {
-        let command = match self.get_wp_with_name(&name) {
-            Some(_) => format!("workspace \"{}\"", name),
-            None => format!("workspace \"{}\"", title_from_name(name)?),
-        };
-        Ok(command)
-    }
-
-    fn send_to(&self, name: &str) -> Result<String, Error> {
-        let command = match self.get_wp_with_name(&name) {
-            Some(_) => format!("move container to workspace \"{}\"", name),
-            None => format!("move container to workspace \"{}\"", title_from_name(name)?),
-        };
-        Ok(command)
-    }
 }
 
 
@@ -118,4 +99,13 @@ impl WorkspaceExt for Workspace {
     fn title<'a>(&'a self) -> &'a str {
         title_from_name(&self.name).unwrap()
     }
+}
+
+
+pub fn go_to(name: &str) -> String {
+    format!("workspace \"{}\"", name)
+}
+
+pub fn send_to(name: &str) -> String {
+    format!("move container to workspace \"{}\"", name)
 }

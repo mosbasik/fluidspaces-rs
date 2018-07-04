@@ -30,6 +30,8 @@ use std::process::Stdio;
 use fluidspaces::WorkspaceExt;
 use fluidspaces::WorkspacesExt;
 use fluidspaces::I3ConnectionExt;
+use fluidspaces::go_to;
+use fluidspaces::send_to;
 
 // use fluidspaces::parse_title_from_name;
 
@@ -85,16 +87,6 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
     stream.read_to_string(&mut message)?;
 
     println!("message: {:?}", &message);  // DEBUG
-
-    // make sure the message is one of the ones we expect before going any further
-    match message.as_str() {
-        "go_to" | "send_to" | "bring_to" | "toggle" => (),
-        _ => {
-            return Err(err_msg(
-                format!("Unexpected message received: {:?}", message),
-            ))
-        }
-    }
 
     // get Workspaces object from i3
     let workspaces = i3.get_workspaces()?;
@@ -152,7 +144,12 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
             // workspace with a matching name doesn't exist)
             match workspaces.get_wp_with_title(title) {
                 Some(wp) => wp.name.clone(),
-                None => title.to_owned(),
+                // None => title.to_owned(),
+                None => {
+                    let next_unused_number = workspaces.workspaces.len() + 1;
+                    format!("{}:{}", next_unused_number, title)
+                    // title.to_owned()
+                },
             }
         }
     };
@@ -164,13 +161,21 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
     // push command strings into the vector according to the requested action
     match message.as_str() {
-        "go_to" | "toggle" => action_cmds.push(workspaces.go_to(&target)?),
-        "send_to" => action_cmds.push(workspaces.send_to(&target)?),
+        "go_to" | "toggle" => {
+            action_cmds.push(go_to(&target))
+        },
+        "send_to" => {
+            action_cmds.push(send_to(&target))
+        },
         "bring_to" => {
-            action_cmds.push(workspaces.send_to(&target)?);
-            action_cmds.push(workspaces.go_to(&target)?);
+            action_cmds.push(send_to(&target));
+            action_cmds.push(go_to(&target));
+        },
+        message => {
+            return Err(err_msg(
+                format!("Unexpected message received: {:?}", message),
+            ))
         }
-        _ => panic!(),  // shouldn't happen
     }
 
     // run action commands all at once
