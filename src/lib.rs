@@ -35,6 +35,8 @@ pub trait WorkspacesExt {
     fn get_wp_with_name(&self, name: &str) -> Option<&Workspace>;
     fn get_wp_with_number(&self, number: usize) -> Option<&Workspace>;
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace>;
+
+    fn next_unused_number(&self) -> usize;
 }
 
 impl WorkspacesExt for Workspaces {
@@ -82,6 +84,10 @@ impl WorkspacesExt for Workspaces {
 
     fn get_wp_with_title(&self, title: &str) -> Option<&Workspace> {
         self.workspaces.iter().find(|wp| wp.title() == title)
+    }
+
+    fn next_unused_number(&self) -> usize {
+        self.workspaces.len() + 1
     }
 }
 
