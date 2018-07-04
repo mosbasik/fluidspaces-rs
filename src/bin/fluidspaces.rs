@@ -139,17 +139,13 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
                 return Ok(());
             }
 
-            // the target is either the full workspace name (if a workspace exists with
-            // a name that matches the chosen title) or the chosen title itself (if a
-            // workspace with a matching name doesn't exist)
+            // the target is either an existing workspace name (if a workspace
+            // with a matching title exists) or the combination of the next
+            // unused number and the chosen title itself (if a workspace with a
+            // matching title doesn't exist)
             match workspaces.get_wp_with_title(title) {
                 Some(wp) => wp.name.clone(),
-                // None => title.to_owned(),
-                None => {
-                    let next_unused_number = workspaces.workspaces.len() + 1;
-                    format!("{}:{}", next_unused_number, title)
-                    // title.to_owned()
-                },
+                None => format!("{}:{}", workspaces.next_unused_number(), title),
             }
         }
     };
