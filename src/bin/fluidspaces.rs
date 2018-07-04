@@ -30,6 +30,8 @@ use std::process::Stdio;
 use fluidspaces::WorkspaceExt;
 use fluidspaces::WorkspacesExt;
 use fluidspaces::I3ConnectionExt;
+use fluidspaces::go_to;
+use fluidspaces::send_to;
 
 // use fluidspaces::parse_title_from_name;
 
@@ -66,6 +68,7 @@ fn main() {
         match stream_res {
             // if the stream was successfully read from the socket
             Ok(mut stream) => {
+                println!("----------");  // DEBUG
                 // process the stream
                 if let Err(e) = handle_stream(&mut i3, &mut stream) {
                     eprintln!("{}", e.cause());
@@ -83,18 +86,7 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
     let mut message = String::new();
     stream.read_to_string(&mut message)?;
 
-    // DEBUG
-    println!("message: {:?}", &message);
-
-    // make sure the message is one of the ones we expect before going any further
-    match message.as_str() {
-        "go_to" | "send_to" | "bring_to" | "toggle" => (),
-        _ => {
-            return Err(err_msg(
-                format!("Unexpected message received: {:?}", message),
-            ))
-        }
-    }
+    println!("message: {:?}", &message);  // DEBUG
 
     // get Workspaces object from i3
     let workspaces = i3.get_workspaces()?;
@@ -126,6 +118,8 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
                     None => return Err(err_msg(format!("Couldn't get ref to stdin of dmenu"))),
                 };
 
+                // println!("workspace choices: {:?}", workspaces.choices_str());  // DEBUG
+
                 // write the list of workspaces to dmenu's stdin
                 stdin.write_all(workspaces.choices_str().as_bytes())?;
             }
@@ -135,7 +129,9 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
             // get the title chosen by the user from dmenu's stdout
             let raw_title = String::from_utf8_lossy(&menu_output.stdout[..]);
+            // println!("choice (raw title) {:?}", raw_title);  // DEBUG
             let title = raw_title.trim();
+            // println!("choice (title) {:?}", title);  // DEBUG
 
             // check to see if the user actually chose a target; if they didn't then we don't need
             // to do anything else and can return early
@@ -143,31 +139,39 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
                 return Ok(());
             }
 
-            // the target is either the full workspace name (if a workspace exists with
-            // a name that matches the chosen title) or the chosen title itself (if a
-            // workspace with a matching name doesn't exist)
+            // the target is either an existing workspace name (if a workspace
+            // with a matching title exists) or the combination of the next
+            // unused number and the chosen title itself (if a workspace with a
+            // matching title doesn't exist)
             match workspaces.get_wp_with_title(title) {
                 Some(wp) => wp.name.clone(),
-                None => title.to_owned(),
+                None => format!("{}:{}", workspaces.next_unused_number(), title),
             }
         }
     };
 
-    // DEBUG
-    println!("target: {:?}", target);
+    println!("target: {:?}", target);  // DEBUG
 
     // initialize empty vector of action commands
     let mut action_cmds: Vec<String> = vec![];
 
     // push command strings into the vector according to the requested action
     match message.as_str() {
-        "go_to" | "toggle" => action_cmds.push(workspaces.go_to(&target)?),
-        "send_to" => action_cmds.push(workspaces.send_to(&target)?),
+        "go_to" | "toggle" => {
+            action_cmds.push(go_to(&target))
+        },
+        "send_to" => {
+            action_cmds.push(send_to(&target))
+        },
         "bring_to" => {
-            action_cmds.push(workspaces.send_to(&target)?);
-            action_cmds.push(workspaces.go_to(&target)?);
+            action_cmds.push(send_to(&target));
+            action_cmds.push(go_to(&target));
+        },
+        message => {
+            return Err(err_msg(
+                format!("Unexpected message received: {:?}", message),
+            ))
         }
-        _ => panic!(),  // shouldn't happen
     }
 
     // run action commands all at once
