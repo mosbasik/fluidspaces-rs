@@ -66,6 +66,7 @@ fn main() {
         match stream_res {
             // if the stream was successfully read from the socket
             Ok(mut stream) => {
+                println!("----------");  // DEBUG
                 // process the stream
                 if let Err(e) = handle_stream(&mut i3, &mut stream) {
                     eprintln!("{}", e.cause());
@@ -83,8 +84,7 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
     let mut message = String::new();
     stream.read_to_string(&mut message)?;
 
-    // DEBUG
-    println!("message: {:?}", &message);
+    println!("message: {:?}", &message);  // DEBUG
 
     // make sure the message is one of the ones we expect before going any further
     match message.as_str() {
@@ -126,6 +126,8 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
                     None => return Err(err_msg(format!("Couldn't get ref to stdin of dmenu"))),
                 };
 
+                // println!("workspace choices: {:?}", workspaces.choices_str());  // DEBUG
+
                 // write the list of workspaces to dmenu's stdin
                 stdin.write_all(workspaces.choices_str().as_bytes())?;
             }
@@ -135,7 +137,9 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
             // get the title chosen by the user from dmenu's stdout
             let raw_title = String::from_utf8_lossy(&menu_output.stdout[..]);
+            // println!("choice (raw title) {:?}", raw_title);  // DEBUG
             let title = raw_title.trim();
+            // println!("choice (title) {:?}", title);  // DEBUG
 
             // check to see if the user actually chose a target; if they didn't then we don't need
             // to do anything else and can return early
@@ -153,8 +157,7 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
         }
     };
 
-    // DEBUG
-    println!("target: {:?}", target);
+    println!("target: {:?}", target);  // DEBUG
 
     // initialize empty vector of action commands
     let mut action_cmds: Vec<String> = vec![];
