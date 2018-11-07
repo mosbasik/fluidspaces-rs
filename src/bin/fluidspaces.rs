@@ -5,8 +5,8 @@ extern crate i3ipc;
 
 // use clap::{Arg, ArgGroup, App};
 
-use failure::Error;
 use failure::err_msg;
+use failure::Error;
 
 use i3ipc::I3Connection;
 // use i3ipc::reply::{Workspace, Workspaces};
