@@ -27,11 +27,11 @@ use std::os::unix::net::UnixStream;
 use std::process::Command;
 use std::process::Stdio;
 
-use fluidspaces::WorkspaceExt;
-use fluidspaces::WorkspacesExt;
-use fluidspaces::I3ConnectionExt;
 use fluidspaces::go_to;
 use fluidspaces::send_to;
+use fluidspaces::I3ConnectionExt;
+use fluidspaces::WorkspaceExt;
+use fluidspaces::WorkspacesExt;
 
 // use fluidspaces::parse_title_from_name;
 
