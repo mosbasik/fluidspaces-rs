@@ -35,9 +35,7 @@ use fluidspaces::WorkspacesExt;
 
 // use fluidspaces::parse_title_from_name;
 
-
 fn main() {
-
     // establish connection with i3 IPC socket
     let mut i3 = match I3Connection::connect() {
         Ok(connection) => connection,
@@ -68,7 +66,8 @@ fn main() {
         match stream_res {
             // if the stream was successfully read from the socket
             Ok(mut stream) => {
-                println!("----------");  // DEBUG
+                println!("----------"); // DEBUG
+
                 // process the stream
                 if let Err(e) = handle_stream(&mut i3, &mut stream) {
                     eprintln!("{}", e.cause());
@@ -81,19 +80,17 @@ fn main() {
 }
 
 fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), Error> {
-
     // decode the stream's contents as UTF8 and save it into the string "message"
     let mut message = String::new();
     stream.read_to_string(&mut message)?;
 
-    println!("message: {:?}", &message);  // DEBUG
+    println!("message: {:?}", &message); // DEBUG
 
     // get Workspaces object from i3
     let workspaces = i3.get_workspaces()?;
 
     // establish the target workspace name (or title) for this action
     let target = match message.as_str() {
-
         // if the action is "toggle", that's all we need to find the target
         "toggle" => {
             match workspaces.get_wp_with_number(2) {
@@ -104,7 +101,6 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
         // if the action isn't "toggle", we have to ask the user to specify a target
         _ => {
-
             // spawn a dmenu process
             let mut menu_proc = Command::new("dmenu")
                 .stdin(Stdio::piped())
@@ -150,7 +146,7 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
         }
     };
 
-    println!("target: {:?}", target);  // DEBUG
+    println!("target: {:?}", target); // DEBUG
 
     // initialize empty vector of action commands
     let mut action_cmds: Vec<String> = vec![];
