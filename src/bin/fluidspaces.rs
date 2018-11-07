@@ -1,12 +1,12 @@
-extern crate failure;
-extern crate i3ipc;
 extern crate clap;
+extern crate failure;
 extern crate fluidspaces;
+extern crate i3ipc;
 
 // use clap::{Arg, ArgGroup, App};
 
-use failure::Error;
 use failure::err_msg;
+use failure::Error;
 
 use i3ipc::I3Connection;
 // use i3ipc::reply::{Workspace, Workspaces};
@@ -27,17 +27,15 @@ use std::os::unix::net::UnixStream;
 use std::process::Command;
 use std::process::Stdio;
 
-use fluidspaces::WorkspaceExt;
-use fluidspaces::WorkspacesExt;
-use fluidspaces::I3ConnectionExt;
 use fluidspaces::go_to;
 use fluidspaces::send_to;
+use fluidspaces::I3ConnectionExt;
+use fluidspaces::WorkspaceExt;
+use fluidspaces::WorkspacesExt;
 
 // use fluidspaces::parse_title_from_name;
 
-
 fn main() {
-
     // establish connection with i3 IPC socket
     let mut i3 = match I3Connection::connect() {
         Ok(connection) => connection,
@@ -68,7 +66,8 @@ fn main() {
         match stream_res {
             // if the stream was successfully read from the socket
             Ok(mut stream) => {
-                println!("----------");  // DEBUG
+                println!("----------"); // DEBUG
+
                 // process the stream
                 if let Err(e) = handle_stream(&mut i3, &mut stream) {
                     eprintln!("{}", e.cause());
@@ -81,30 +80,25 @@ fn main() {
 }
 
 fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), Error> {
-
     // decode the stream's contents as UTF8 and save it into the string "message"
     let mut message = String::new();
     stream.read_to_string(&mut message)?;
 
-    println!("message: {:?}", &message);  // DEBUG
+    println!("message: {:?}", &message); // DEBUG
 
     // get Workspaces object from i3
     let workspaces = i3.get_workspaces()?;
 
     // establish the target workspace name (or title) for this action
     let target = match message.as_str() {
-
         // if the action is "toggle", that's all we need to find the target
-        "toggle" => {
-            match workspaces.get_wp_with_number(2) {
-                Some(wp) => wp.name.clone(),
-                None => return Err(err_msg(format!("Couldn't find workspace number 2"))),
-            }
-        }
+        "toggle" => match workspaces.get_wp_with_number(2) {
+            Some(wp) => wp.name.clone(),
+            None => return Err(err_msg(format!("Couldn't find workspace number 2"))),
+        },
 
         // if the action isn't "toggle", we have to ask the user to specify a target
         _ => {
-
             // spawn a dmenu process
             let mut menu_proc = Command::new("dmenu")
                 .stdin(Stdio::piped())
@@ -150,27 +144,24 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
         }
     };
 
-    println!("target: {:?}", target);  // DEBUG
+    println!("target: {:?}", target); // DEBUG
 
     // initialize empty vector of action commands
     let mut action_cmds: Vec<String> = vec![];
 
     // push command strings into the vector according to the requested action
     match message.as_str() {
-        "go_to" | "toggle" => {
-            action_cmds.push(go_to(&target))
-        },
-        "send_to" => {
-            action_cmds.push(send_to(&target))
-        },
+        "go_to" | "toggle" => action_cmds.push(go_to(&target)),
+        "send_to" => action_cmds.push(send_to(&target)),
         "bring_to" => {
             action_cmds.push(send_to(&target));
             action_cmds.push(go_to(&target));
-        },
+        }
         message => {
-            return Err(err_msg(
-                format!("Unexpected message received: {:?}", message),
-            ))
+            return Err(err_msg(format!(
+                "Unexpected message received: {:?}",
+                message
+            )))
         }
     }
 
