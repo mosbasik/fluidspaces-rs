@@ -92,12 +92,10 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
     // establish the target workspace name (or title) for this action
     let target = match message.as_str() {
         // if the action is "toggle", that's all we need to find the target
-        "toggle" => {
-            match workspaces.get_wp_with_number(2) {
-                Some(wp) => wp.name.clone(),
-                None => return Err(err_msg(format!("Couldn't find workspace number 2"))),
-            }
-        }
+        "toggle" => match workspaces.get_wp_with_number(2) {
+            Some(wp) => wp.name.clone(),
+            None => return Err(err_msg(format!("Couldn't find workspace number 2"))),
+        },
 
         // if the action isn't "toggle", we have to ask the user to specify a target
         _ => {
@@ -153,20 +151,17 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
     // push command strings into the vector according to the requested action
     match message.as_str() {
-        "go_to" | "toggle" => {
-            action_cmds.push(go_to(&target))
-        },
-        "send_to" => {
-            action_cmds.push(send_to(&target))
-        },
+        "go_to" | "toggle" => action_cmds.push(go_to(&target)),
+        "send_to" => action_cmds.push(send_to(&target)),
         "bring_to" => {
             action_cmds.push(send_to(&target));
             action_cmds.push(go_to(&target));
-        },
+        }
         message => {
-            return Err(err_msg(
-                format!("Unexpected message received: {:?}", message),
-            ))
+            return Err(err_msg(format!(
+                "Unexpected message received: {:?}",
+                message
+            )))
         }
     }
 
