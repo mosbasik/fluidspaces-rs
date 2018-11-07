@@ -1,7 +1,7 @@
-extern crate failure;
-extern crate i3ipc;
 extern crate clap;
+extern crate failure;
 extern crate fluidspaces;
+extern crate i3ipc;
 
 // use clap::{Arg, ArgGroup, App};
 
