@@ -1,29 +1,21 @@
 extern crate failure;
 
-use failure::Error;
 use failure::err_msg;
+use failure::Error;
 
 use nom::{digit, rest};
 
 use std;
 
-
-named!(usize_parser<usize>,
+named!(
+    usize_parser<usize>,
     map_res!(
-        map_res!(
-            digit,
-            std::str::from_utf8
-        ),
+        map_res!(digit, std::str::from_utf8),
         std::str::FromStr::from_str
     )
 );
 
-named!(title_parser<&str>,
-    map_res!(
-        rest,
-        std::str::from_utf8
-    )
-);
+named!(title_parser<&str>, map_res!(rest, std::str::from_utf8));
 
 named!(pub parse_title_from_name<&str>, dbg!(
     do_parse!(
@@ -37,12 +29,12 @@ named!(pub parse_title_from_name<&str>, dbg!(
 pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
     match parse_title_from_name(name.as_bytes()).to_full_result() {
         Ok(title) => Ok(title),
-        Err(e) => Err(err_msg(
-            format!("Couldn't parse title from name {:?}: {:?}", name, e),
-        )),
+        Err(e) => Err(err_msg(format!(
+            "Couldn't parse title from name {:?}: {:?}",
+            name, e
+        ))),
     }
 }
-
 
 #[cfg(test)]
 mod tests {
