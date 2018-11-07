@@ -79,5 +79,9 @@ mod tests {
         title_has_number_after: ("7:foo2", "foo2"),
         title_has_number_before: ("7:2foo", "2foo"),
         title_has_numberspace_before: ("7:2 foo", "2 foo"),
+
+        number_title_with_present_index_present_colon: ("7:2", "2"),
+        number_title_with_missing_index_present_colon: (":2", "2"),
+        number_title_with_missing_index_missing_colon: ("2", "2"),
     }
 }
