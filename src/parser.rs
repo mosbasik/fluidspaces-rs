@@ -18,10 +18,14 @@ use std;
 //     )
 // );
 
+// parser matches as many digits as possible and then stops; outputs the digits
+// or an empty string
 named!(number<Input, Input>, take_while!(is_digit));
 
+// parser matches a colon if present; outputs colon or an empty string
 named!(colon<Input, Input>, alt!(tag!(":") | value!(Input(b""))));
 
+// parser matches all input until the end; outputs everything matched
 named!(the_rest<Input, Input>, call!(rest));
 
 // // defines "title_parser"
