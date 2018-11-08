@@ -22,6 +22,8 @@ named!(number<Input, Input>, take_while!(is_digit));
 
 named!(colon<Input, Input>, alt!(tag!(":") | value!(Input(b""))));
 
+named!(the_rest<Input, Input>, call!(rest));
+
 // // defines "title_parser"
 // // returns the rest of the input
 // named!(title_parser<&str>, map_res!(rest, std::str::from_utf8));
@@ -103,6 +105,19 @@ mod tests {
             colon_then_letter: (":a", ":"),
             number_then_colon: ("7:", ""),
             letter_then_colon: ("a:", ""),
+        }
+    }
+
+    mod the_rest_tests {
+        use super::super::the_rest;
+        use nom::types::CompleteByteSlice as Input;
+        test_parser! {
+            the_rest,
+            nothing: ("", ""),
+            one_letter: ("a", "a"),
+            multiple_letters: ("aa", "aa"),
+            spaced_letters: ("a a", "a a"),
+            contains_colon: ("a:a", "a:a"),
         }
     }
 
