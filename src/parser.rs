@@ -7,6 +7,8 @@ use nom::{digit, rest};
 
 use std;
 
+// defines "usize_parser"
+// returns a usize parsed from the input string?
 named!(
     usize_parser<usize>,
     map_res!(
@@ -15,8 +17,15 @@ named!(
     )
 );
 
+// defines "title_parser"
+// returns the rest of the input
 named!(title_parser<&str>, map_res!(rest, std::str::from_utf8));
 
+// defines "parse_title_from_name"
+// in order:
+//   parses and discards a usize (optional)
+//   parses and discards a colon (optional)
+//   returns the rest of the input
 named!(pub parse_title_from_name<&str>, dbg!(
     do_parse!(
         opt!(ws!(usize_parser)) >>
