@@ -59,14 +59,6 @@ pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
 
 #[cfg(test)]
 mod tests {
-    // use nom::IResult;
-    // use super::usize_parser;
-    // use super::title_from_name;
-
-    // #[test]
-    // fn usize_parser_single_digit() {
-    //     assert_eq!(usize_parser(&b"7"[..]), IResult::Done(&b""[..], 7));
-    // }
 
     // define macro that will generate tests for any parser that uses Input type
     // for both input and output
