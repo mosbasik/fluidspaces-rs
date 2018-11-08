@@ -64,20 +64,21 @@ mod tests {
     //     assert_eq!(usize_parser(&b"7"[..]), IResult::Done(&b""[..], 7));
     // }
 
-    macro_rules! test_parser {
-        ($parser:ident, $($name:ident: $value:expr,)*) => {
-            $(
-                #[test]
-                fn $name() {
-                    let (input, expected) = $value;
-                    assert_eq!(
-                        $parser(Input(input.as_bytes())).unwrap().1,
-                        Input(expected.as_bytes())
-                    );
-                }
-            )*
+    // define macro that will generate tests for any parser that uses Input type
+    // for both input and output
+    macro_rules! test_parser {(
+        $parser:ident,
+        $($name:ident: $value:expr,)*
+    ) => {$(
+        #[test]
+        fn $name() {
+            let (input, expected) = $value;
+            assert_eq!(
+                $parser(Input(input.as_bytes())).unwrap().1,
+                Input(expected.as_bytes())
+            );
         }
-    }
+    )*}}
 
     mod number_tests {
         use super::super::number;
