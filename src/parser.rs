@@ -18,11 +18,10 @@ use nom::{is_digit, rest};
 //     )
 // );
 
-// parser matches as many digits as possible and then stops; outputs the digits
-// or an empty string
-named!(number<Input, Input>, take_while!(is_digit));
+// parser matches as many digits as possible; errors if no digits present
+named!(number<Input, Input>, take_while1!(is_digit));
 
-// parser matches a colon if present and errors if not
+// parser matches a colon; errors if no colon present
 named!(colon<Input, Input>, tag!(":"));
 
 // parser matches all input until the end; outputs everything matched
@@ -90,10 +89,11 @@ mod tests {
             long_start: ("77", Ok((Input(b""), Input(b"77")))),
             trailing_letter: ("7a", Ok((Input(b"a"), Input(b"7")))),
             long_start_and_trailing_letter: ("77a", Ok((Input(b"a"), Input(b"77")))),
-            immediate_letter: ("a", Ok((Input(b"a"), Input(b"")))),
-            immediate_colon: (":", Ok((Input(b":"), Input(b"")))),
-            number_after_letters: ("a7", Ok((Input(b"a7"), Input(b"")))),
-            number_after_colon: (":7", Ok((Input(b":7"), Input(b"")))),
+
+            immediate_letter: ("a", Err(Error(Code(Input(b"a"), ErrorKind::TakeWhile1)))),
+            immediate_colon: (":", Err(Error(Code(Input(b":"), ErrorKind::TakeWhile1)))),
+            number_after_letters: ("a7", Err(Error(Code(Input(b"a7"), ErrorKind::TakeWhile1)))),
+            number_after_colon: (":7", Err(Error(Code(Input(b":7"), ErrorKind::TakeWhile1)))),
         }
     }
 
@@ -104,6 +104,7 @@ mod tests {
             basic: (":", Ok((Input(b""), Input(b":")))),
             colon_then_number: (":7", Ok((Input(b"7"), Input(b":")))),
             colon_then_letter: (":a", Ok((Input(b"a"), Input(b":")))),
+
             number_then_colon: ("7:", Err(Error(Code(Input(b"7:"), ErrorKind::Tag)))),
             letter_then_colon: ("a:", Err(Error(Code(Input(b"a:"), ErrorKind::Tag)))),
         }
