@@ -22,8 +22,8 @@ use nom::{is_digit, rest};
 // or an empty string
 named!(number<Input, Input>, take_while!(is_digit));
 
-// parser matches a colon if present; outputs colon or an empty string
-named!(colon<Input, Input>, alt!(tag!(":") | value!(Input(b""))));
+// parser matches a colon if present and errors if not
+named!(colon<Input, Input>, tag!(":"));
 
 // parser matches all input until the end; outputs everything matched
 named!(the_rest<Input, Input>, call!(rest));
@@ -59,6 +59,8 @@ pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
 
 #[cfg(test)]
 mod tests {
+    use nom::{types::CompleteByteSlice as Input, Context::Code, Err::Error, ErrorKind};
+    use super::{colon, number, the_rest};
 
     // define macro that will generate tests for any parser that uses Input type
     // for both input and output
@@ -68,53 +70,54 @@ mod tests {
     ) => {$(
         #[test]
         fn $name() {
-            let (input, expected) = $value;
-            assert_eq!(
-                $parser(Input(input.as_bytes())).unwrap().1,
-                Input(expected.as_bytes())
-            );
+            let (input, expected_result): (&str, nom::IResult<Input, Input>) = $value;
+            match $parser(Input(input.as_bytes())) {
+                Ok(actual_result) => assert_eq!(
+                    actual_result,
+                    expected_result.expect("Parser gave an Ok() but test expects an Err()")),
+                Err(actual_result) => assert_eq!(
+                    actual_result,
+                    expected_result.expect_err("Parser gave an Err() but test expects an Ok()"))
+            }
         }
     )*}}
 
     mod number_tests {
-        use super::super::number;
-        use nom::types::CompleteByteSlice as Input;
+        use super::*;
         test_parser! {
             number,
-            basic: ("7", "7"),
-            long_start: ("77", "77"),
-            trailing_letter: ("7a", "7"),
-            long_start_and_trailing_letter: ("77a", "77"),
-            immediate_letter: ("a", ""),
-            immediate_colon: (":", ""),
-            number_after_letters: ("a7", ""),
-            number_after_colon: (":7", ""),
+            basic: ("7", Ok((Input(b""), Input(b"7")))),
+            long_start: ("77", Ok((Input(b""), Input(b"77")))),
+            trailing_letter: ("7a", Ok((Input(b"a"), Input(b"7")))),
+            long_start_and_trailing_letter: ("77a", Ok((Input(b"a"), Input(b"77")))),
+            immediate_letter: ("a", Ok((Input(b"a"), Input(b"")))),
+            immediate_colon: (":", Ok((Input(b":"), Input(b"")))),
+            number_after_letters: ("a7", Ok((Input(b"a7"), Input(b"")))),
+            number_after_colon: (":7", Ok((Input(b":7"), Input(b"")))),
         }
     }
 
     mod colon_tests {
-        use super::super::colon;
-        use nom::types::CompleteByteSlice as Input;
+        use super::*;
         test_parser! {
             colon,
-            basic: (":", ":"),
-            colon_then_number: (":7", ":"),
-            colon_then_letter: (":a", ":"),
-            number_then_colon: ("7:", ""),
-            letter_then_colon: ("a:", ""),
+            basic: (":", Ok((Input(b""), Input(b":")))),
+            colon_then_number: (":7", Ok((Input(b"7"), Input(b":")))),
+            colon_then_letter: (":a", Ok((Input(b"a"), Input(b":")))),
+            number_then_colon: ("7:", Err(Error(Code(Input(b"7:"), ErrorKind::Tag)))),
+            letter_then_colon: ("a:", Err(Error(Code(Input(b"a:"), ErrorKind::Tag)))),
         }
     }
 
     mod the_rest_tests {
-        use super::super::the_rest;
-        use nom::types::CompleteByteSlice as Input;
+        use super::*;
         test_parser! {
             the_rest,
-            nothing: ("", ""),
-            one_letter: ("a", "a"),
-            multiple_letters: ("aa", "aa"),
-            spaced_letters: ("a a", "a a"),
-            contains_colon: ("a:a", "a:a"),
+            nothing: ("", Ok((Input(b""), Input(b"")))),
+            one_letter: ("a", Ok((Input(b""), Input(b"a")))),
+            multiple_letters: ("aa", Ok((Input(b""), Input(b"aa")))),
+            spaced_letters: ("a a", Ok((Input(b""), Input(b"a a")))),
+            contains_colon: ("a:a", Ok((Input(b""), Input(b"a:a")))),
         }
     }
 
