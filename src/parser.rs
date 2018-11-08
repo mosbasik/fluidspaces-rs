@@ -3,7 +3,8 @@ extern crate failure;
 use failure::err_msg;
 use failure::Error;
 
-use nom::{digit, rest};
+use nom::types::CompleteByteSlice as Input;
+use nom::{digit, is_digit, rest};
 
 use std;
 
@@ -16,6 +17,8 @@ use std;
 //         std::str::FromStr::from_str
 //     )
 // );
+
+named!(number<Input, Input>, take_while!(is_digit));
 
 // // defines "title_parser"
 // // returns the rest of the input
@@ -57,6 +60,33 @@ mod tests {
     //     assert_eq!(usize_parser(&b"7"[..]), IResult::Done(&b""[..], 7));
     // }
 
+    mod number_tests {
+        use super::super::number;
+        use nom::types::CompleteByteSlice as Input;
+        macro_rules! number_tests {
+            ($($name:ident: $value:expr,)*) => {
+                $(
+                    #[test]
+                    fn $name() {
+                        let (input, expected) = $value;
+                        assert_eq!(
+                            number(Input(input.as_bytes())).unwrap().1,
+                            Input(expected.as_bytes())
+                        );
+                    }
+                )*
+            }
+        }
+        number_tests! {
+            basic: ("7", "7"),
+            long_start: ("77", "77"),
+            trailing_letter: ("7a", "7"),
+            long_start_and_trailing_letter: ("77a", "77"),
+            immediate_letter: ("a", ""),
+            immediate_colon: (":", ""),
+            number_after_letters: ("a7", ""),
+            number_after_colon: (":7", ""),
+        }
     }
 
     // // define a macro that can generate test functions for us
