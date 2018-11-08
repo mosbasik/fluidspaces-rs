@@ -1,12 +1,12 @@
 extern crate failure;
 
-use failure::err_msg;
+// use failure::err_msg;
 use failure::Error;
 
 use nom::types::CompleteByteSlice as Input;
-use nom::{digit, is_digit, rest};
+use nom::{is_digit, rest};
 
-use std;
+// use std;
 
 // // defines "usize_parser"
 // // returns a usize parsed from the input string?
