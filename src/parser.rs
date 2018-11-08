@@ -20,6 +20,8 @@ use std;
 
 named!(number<Input, Input>, take_while!(is_digit));
 
+named!(colon<Input, Input>, alt!(tag!(":") | value!(Input(b""))));
+
 // // defines "title_parser"
 // // returns the rest of the input
 // named!(title_parser<&str>, map_res!(rest, std::str::from_utf8));
@@ -88,6 +90,19 @@ mod tests {
             immediate_colon: (":", ""),
             number_after_letters: ("a7", ""),
             number_after_colon: (":7", ""),
+        }
+    }
+
+    mod colon_tests {
+        use super::super::colon as parser;
+        use nom::types::CompleteByteSlice as Input;
+
+        test_parser! {
+            basic: (":", ":"),
+            colon_then_number: (":7", ":"),
+            colon_then_letter: (":a", ":"),
+            number_then_colon: ("7:", ""),
+            letter_then_colon: ("a:", ""),
         }
     }
 
