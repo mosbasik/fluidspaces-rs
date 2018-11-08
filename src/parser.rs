@@ -63,13 +63,13 @@ mod tests {
     // }
 
     macro_rules! test_parser {
-        ($($name:ident: $value:expr,)*) => {
+        ($parser:ident, $($name:ident: $value:expr,)*) => {
             $(
                 #[test]
                 fn $name() {
                     let (input, expected) = $value;
                     assert_eq!(
-                        parser(Input(input.as_bytes())).unwrap().1,
+                        $parser(Input(input.as_bytes())).unwrap().1,
                         Input(expected.as_bytes())
                     );
                 }
@@ -78,10 +78,10 @@ mod tests {
     }
 
     mod number_tests {
-        use super::super::number as parser;
+        use super::super::number;
         use nom::types::CompleteByteSlice as Input;
-
         test_parser! {
+            number,
             basic: ("7", "7"),
             long_start: ("77", "77"),
             trailing_letter: ("7a", "7"),
@@ -94,10 +94,10 @@ mod tests {
     }
 
     mod colon_tests {
-        use super::super::colon as parser;
+        use super::super::colon;
         use nom::types::CompleteByteSlice as Input;
-
         test_parser! {
+            colon,
             basic: (":", ":"),
             colon_then_number: (":7", ":"),
             colon_then_letter: (":a", ":"),
