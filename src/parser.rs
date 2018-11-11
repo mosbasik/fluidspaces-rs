@@ -3,8 +3,8 @@ extern crate failure;
 // use failure::err_msg;
 use failure::Error;
 
-use nom::types::CompleteByteSlice as Input;
-use nom::{is_digit, rest};
+use nom::types::CompleteStr as Input;
+use nom::{digit, rest};
 
 // use std;
 
@@ -19,7 +19,7 @@ use nom::{is_digit, rest};
 // );
 
 // parser matches as many digits as possible; errors if no digits present
-named!(number<Input, Input>, take_while1!(is_digit));
+named!(number<Input, Input>, call!(digit));
 
 // parser matches a colon; errors if no colon present
 named!(colon<Input, Input>, tag!(":"));
@@ -58,8 +58,8 @@ pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
 
 #[cfg(test)]
 mod tests {
-    use nom::{types::CompleteByteSlice as Input, Context::Code, Err::Error, ErrorKind};
     use super::{colon, number, the_rest};
+    use nom::{types::CompleteStr as Input, Context::Code, Err::Error, ErrorKind};
 
     // define macro that will generate tests for any parser that uses Input type
     // for both input and output
@@ -69,14 +69,14 @@ mod tests {
     ) => {$(
         #[test]
         fn $name() {
-            let (input, expected_result): (&str, nom::IResult<Input, Input>) = $value;
-            match $parser(Input(input.as_bytes())) {
-                Ok(actual_result) => assert_eq!(
-                    actual_result,
-                    expected_result.expect("Parser gave an Ok() but test expects an Err()")),
-                Err(actual_result) => assert_eq!(
-                    actual_result,
-                    expected_result.expect_err("Parser gave an Err() but test expects an Ok()"))
+            let (input, expected_out): (&str, nom::IResult<Input, Input>) = $value;
+            match $parser(Input(input)) {
+                Ok(actual_out) => assert_eq!(
+                    actual_out,
+                    expected_out.expect("Parser gave an Ok() but test expects an Err()")),
+                Err(actual_out) => assert_eq!(
+                    actual_out,
+                    expected_out.expect_err("Parser gave an Err() but test expects an Ok()"))
             }
         }
     )*}}
@@ -85,15 +85,15 @@ mod tests {
         use super::*;
         test_parser! {
             number,
-            basic: ("7", Ok((Input(b""), Input(b"7")))),
-            long_start: ("77", Ok((Input(b""), Input(b"77")))),
-            trailing_letter: ("7a", Ok((Input(b"a"), Input(b"7")))),
-            long_start_and_trailing_letter: ("77a", Ok((Input(b"a"), Input(b"77")))),
+            basic: ("7", Ok((Input(""), Input("7")))),
+            long_start: ("77", Ok((Input(""), Input("77")))),
+            trailing_letter: ("7a", Ok((Input("a"), Input("7")))),
+            long_start_and_trailing_letter: ("77a", Ok((Input("a"), Input("77")))),
 
-            immediate_letter: ("a", Err(Error(Code(Input(b"a"), ErrorKind::TakeWhile1)))),
-            immediate_colon: (":", Err(Error(Code(Input(b":"), ErrorKind::TakeWhile1)))),
-            number_after_letters: ("a7", Err(Error(Code(Input(b"a7"), ErrorKind::TakeWhile1)))),
-            number_after_colon: (":7", Err(Error(Code(Input(b":7"), ErrorKind::TakeWhile1)))),
+            immediate_letter: ("a", Err(Error(Code(Input("a"), ErrorKind::Digit)))),
+            immediate_colon: (":", Err(Error(Code(Input(":"), ErrorKind::Digit)))),
+            number_after_letters: ("a7", Err(Error(Code(Input("a7"), ErrorKind::Digit)))),
+            number_after_colon: (":7", Err(Error(Code(Input(":7"), ErrorKind::Digit)))),
         }
     }
 
@@ -101,12 +101,12 @@ mod tests {
         use super::*;
         test_parser! {
             colon,
-            basic: (":", Ok((Input(b""), Input(b":")))),
-            colon_then_number: (":7", Ok((Input(b"7"), Input(b":")))),
-            colon_then_letter: (":a", Ok((Input(b"a"), Input(b":")))),
+            basic: (":", Ok((Input(""), Input(":")))),
+            colon_then_number: (":7", Ok((Input("7"), Input(":")))),
+            colon_then_letter: (":a", Ok((Input("a"), Input(":")))),
 
-            number_then_colon: ("7:", Err(Error(Code(Input(b"7:"), ErrorKind::Tag)))),
-            letter_then_colon: ("a:", Err(Error(Code(Input(b"a:"), ErrorKind::Tag)))),
+            number_then_colon: ("7:", Err(Error(Code(Input("7:"), ErrorKind::Tag)))),
+            letter_then_colon: ("a:", Err(Error(Code(Input("a:"), ErrorKind::Tag)))),
         }
     }
 
@@ -114,11 +114,11 @@ mod tests {
         use super::*;
         test_parser! {
             the_rest,
-            nothing: ("", Ok((Input(b""), Input(b"")))),
-            one_letter: ("a", Ok((Input(b""), Input(b"a")))),
-            multiple_letters: ("aa", Ok((Input(b""), Input(b"aa")))),
-            spaced_letters: ("a a", Ok((Input(b""), Input(b"a a")))),
-            contains_colon: ("a:a", Ok((Input(b""), Input(b"a:a")))),
+            nothing: ("", Ok((Input(""), Input("")))),
+            one_letter: ("a", Ok((Input(""), Input("a")))),
+            multiple_letters: ("aa", Ok((Input(""), Input("aa")))),
+            spaced_letters: ("a a", Ok((Input(""), Input("a a")))),
+            contains_colon: ("a:a", Ok((Input(""), Input("a:a")))),
         }
     }
 
