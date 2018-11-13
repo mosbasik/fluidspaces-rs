@@ -27,6 +27,18 @@ named!(colon<Input, Input>, tag!(":"));
 // parser matches all input until the end; outputs everything matched
 named!(the_rest<Input, Input>, call!(rest));
 
+named!(pub title_parser<Input, (Option<Input>, Option<Input>)>,
+    do_parse!(
+        num: opt!(ws!(number)) >>
+        opt!(ws!(colon)) >>
+        name: opt!(ws!(the_rest)) >>
+        (num, match name {
+            Some(Input("")) => None,
+            _ => name
+        })
+    )
+);
+
 // // defines "title_parser"
 // // returns the rest of the input
 // named!(title_parser<&str>, map_res!(rest, std::str::from_utf8));
@@ -58,7 +70,7 @@ pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::{colon, number, the_rest};
+    use super::{colon, number, the_rest, title_parser};
     use nom::{types::CompleteStr as Input, Context::Code, Err::Error, ErrorKind};
 
     // define macro that will generate tests for any parser that uses Input type
@@ -119,6 +131,55 @@ mod tests {
             multiple_letters: ("aa", Ok((Input(""), Input("aa")))),
             spaced_letters: ("a a", Ok((Input(""), Input("a a")))),
             contains_colon: ("a:a", Ok((Input(""), Input("a:a")))),
+        }
+    }
+
+    mod title_tests {
+        use super::*;
+
+        // define macro that will generate tests for title_parser
+        macro_rules! parser_tests {(
+            $($name:ident: $value:expr,)*
+        ) => {$(
+
+            #[test]
+            fn $name() {
+                let (input, exp_out): (&str, (Option<Input>, Option<Input>)) = $value;
+                match title_parser(Input(input)) {
+                    Ok((_, act_out)) => assert_eq!(act_out, exp_out),
+                    Err(_) => {
+                        // assert_eq!(
+                        // act_out,
+                        // exp_out.expect_err("Parser gave an Err() but test expects an Ok()"))
+                        panic!("Parser gave an Err() but test expects an Ok()");
+                    }
+                }
+            }
+
+        )*}}
+
+        parser_tests! {
+            basic: ("7:foo", (Some(Input("7")), Some(Input("foo")))),
+            number_is_multidigit: ("77:foo", (Some(Input("77")), Some(Input("foo")))),
+            number_is_missing: (":foo", (None, Some(Input("foo")))),
+            number_and_colon_are_missing: ("foo", (None, Some(Input("foo")))),
+
+            space_after_colon: ("7: foo", (Some(Input("7")), Some(Input("foo")))),
+            space_before_colon: ("7 :foo", (Some(Input("7")), Some(Input("foo")))),
+            space_around_colon: ("7 : foo", (Some(Input("7")), Some(Input("foo")))),
+
+            title_has_space: ("7:foo bar", (Some(Input("7")), Some(Input("foo bar")))),
+            title_has_hyphen: ("7:foo-bar", (Some(Input("7")), Some(Input("foo-bar")))),
+            title_has_apostrophe: ("7:foo'bar", (Some(Input("7")), Some(Input("foo'bar")))),
+
+            title_has_number_inside: ("7:fo2o", (Some(Input("7")), Some(Input("fo2o")))),
+            title_has_number_after: ("7:foo2", (Some(Input("7")), Some(Input("foo2")))),
+            title_has_number_before: ("7:2foo", (Some(Input("7")), Some(Input("2foo")))),
+            title_has_numberspace_before: ("7:2 foo", (Some(Input("7")), Some(Input("2 foo")))),
+
+            number_title_with_present_index_present_colon: ("7:2", (Some(Input("7")), Some(Input("2")))),
+            number_title_with_missing_index_present_colon: (":2", (None, Some(Input("2")))),
+            number_title_with_missing_index_missing_colon: ("2", (Some(Input("2")), None)),
         }
     }
 
