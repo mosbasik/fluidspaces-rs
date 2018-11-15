@@ -7,10 +7,9 @@ use std::io::Write;
 
 use std::os::unix::net::UnixStream;
 
-
 fn main() {
     let matches = App::new("fluidspaces")
-        .version("0.4.0")
+        .version("0.4.1")
         .author("Peter Henry <me@peterhenry.net>")
         .about("Navigator for i3wm \"named containers\". Create i3 workspaces with custom names on the fly, navigate between them based on their their name or position, and move containers between them.")
         // .arg(Arg::with_name(&"bring_to")
