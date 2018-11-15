@@ -1,7 +1,7 @@
 extern crate clap;
 
-use clap::Arg;
 use clap::App;
+use clap::Arg;
 
 use std::io::Write;
 
@@ -65,5 +65,7 @@ fn main() {
     }
 
     // send the value of the action option to the socket
-    stream.write_all(matches.value_of("action").unwrap_or("go_to").as_bytes()).unwrap();
+    stream
+        .write_all(matches.value_of("action").unwrap_or("go_to").as_bytes())
+        .unwrap();
 }
