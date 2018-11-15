@@ -1,10 +1,12 @@
 extern crate failure;
 
-// use failure::err_msg;
+use failure::err_msg;
 use failure::Error;
 
 use nom::types::CompleteStr as Input;
 use nom::{digit, rest};
+
+use std::str::from_utf8;
 
 // use std;
 
@@ -58,14 +60,13 @@ named!(pub title_parser<Input, (Option<Input>, Option<Input>)>,
 // ));
 
 pub fn title_from_name<'a>(name: &'a str) -> Result<&'a str, Error> {
-    unimplemented!();
-    // match parse_title_from_name(name.as_bytes()).to_full_result() {
-    //     Ok(title) => Ok(title),
-    //     Err(e) => Err(err_msg(format!(
-    //         "Couldn't parse title from name {:?}: {:?}",
-    //         name, e
-    //     ))),
-    // }
+    match title_parser(Input(name)) {
+        Ok((_, (number, name))) => Ok(from_utf8(name.or(number).unwrap().as_bytes())?),
+        Err(e) => Err(err_msg(format!(
+            "Couldn't parse title from name {:?}: {:?}",
+            name, e
+        ))),
+    }
 }
 
 #[cfg(test)]
