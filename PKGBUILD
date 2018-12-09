@@ -1,7 +1,7 @@
 # Maintainer: Peter Henry <me@peterhenry.net>
 pkgname="fluidspaces-rs-git"
 _pkgname="fluidspaces"
-pkgver="0.4.1.r4-ge0bf0eb"
+pkgver="0.4.1.r5.gb27d3a3"
 pkgrel=1
 pkgdesc="Daemon written in Rust to manage dynamically named i3 workspaces."
 arch=('x86_64')
@@ -25,7 +25,7 @@ sha256sums=('SKIP')
 pkgver() {
   cd "$pkgname"
   # echo "$(grep '^version =' Cargo.toml|head -n1|cut -d\" -f2).$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
-  git describe --long --tags | sed 's/^v// ; s/\([^-]*-g\)/r\1/ ; s/-/\./'
+  git describe --long --tags | sed 's/^v// ; s/\([^-]*-g\)/r\1/ ; s/-/\./g'
 }
 
 build () {
