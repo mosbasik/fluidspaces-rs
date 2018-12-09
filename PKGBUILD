@@ -39,6 +39,6 @@ package() {
   install -D -m755 "$srcdir/$pkgname/target/release/fluidspaces" "$pkgdir/usr/bin/fluidspaces"
   install -D -m755 "$srcdir/$pkgname/target/release/fluidspaces-msg" "$pkgdir/usr/bin/fluidspaces-msg"
 
-  sed -i "s:ExecStart=/usr/bin/fluidspaces:ExecStart=${pkgdir}/usr/bin/fluidspaces:" "fluidspaces.service"
+  # sed -i "s:ExecStart=/usr/bin/fluidspaces:ExecStart=${pkgdir}/usr/bin/fluidspaces:" "fluidspaces.service"
   install -D -m755 "$srcdir/$pkgname/fluidspaces.service" "$pkgdir/usr/lib/systemd/user/fluidspaces.service"
 }
