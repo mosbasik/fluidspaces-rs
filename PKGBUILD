@@ -30,7 +30,7 @@ pkgver() {
 
 build () {
   cd "$pkgname"
-  env CARGO_INCREMENTAL=0 cargo build --release
+  env CARGO_INCREMENTAL=0 cargo +stable build --release
 }
 
 package() {
