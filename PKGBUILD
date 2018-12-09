@@ -17,7 +17,7 @@ conflicts=($_pkgname)
 options=()
 # install=
 # changelog=
-source=("$pkgname::git+https://github.com/mosbasik/fluidspaces-rs.git#feature/arch-package")
+source=("$pkgname::git+https://github.com/mosbasik/fluidspaces-rs.git#branch=feature/arch-package")
 # noextract=()
 # md5sums=() #autofill using updpkgsums
 sha256sums=('SKIP')
