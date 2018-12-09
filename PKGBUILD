@@ -15,7 +15,6 @@ conflicts=($_pkgname)
 # replaces=()
 # backup=()
 options=()
-# install=
 # changelog=
 source=("$pkgname::git+https://github.com/mosbasik/fluidspaces-rs.git#branch=feature/arch-package")
 # noextract=()
@@ -24,7 +23,6 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd "$pkgname"
-  # echo "$(grep '^version =' Cargo.toml|head -n1|cut -d\" -f2).$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
   git describe --long --tags | sed 's/^v// ; s/\([^-]*-g\)/r\1/ ; s/-/\./g'
 }
 
@@ -42,7 +40,5 @@ package() {
 
   install -D -m755 "$srcdir/$pkgname/target/release/fluidspaces" "$pkgdir/usr/bin/fluidspaces"
   install -D -m755 "$srcdir/$pkgname/target/release/fluidspaces-msg" "$pkgdir/usr/bin/fluidspaces-msg"
-
-  # sed -i "s:ExecStart=/usr/bin/fluidspaces:ExecStart=${pkgdir}/usr/bin/fluidspaces:" "fluidspaces.service"
   install -D -m644 "$srcdir/$pkgname/fluidspaces.service" "$pkgdir/usr/lib/systemd/user/fluidspaces.service"
 }
