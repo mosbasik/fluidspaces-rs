@@ -2,6 +2,7 @@
 name = "fluidspaces"
 version = "0.4.1"
 authors = ["Peter Henry <me@peterhenry.net>"]
+license = "Apache-2.0 OR MIT"
 
 # [[bin]]
 # name = "fluidspaces"
