@@ -28,6 +28,10 @@ pkgver() {
   git describe --long --tags | sed 's/^v// ; s/\([^-]*-g\)/r\1/ ; s/-/\./g'
 }
 
+prepare() {
+  rustup toolchain install stable
+}
+
 build () {
   cd "$pkgname"
   env CARGO_INCREMENTAL=0 cargo +stable build --release
