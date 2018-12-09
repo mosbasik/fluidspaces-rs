@@ -1,0 +1,13 @@
+[Unit]
+Description=Daemon written in Rust to manage dynamically named i3 workspaces.
+StartLimitBurst=5
+StartLimitIntervalSec=10
+Conflicts=fluidspaces-dev.service
+
+[Service]
+Restart=always
+RestartSec=1
+ExecStart=/usr/bin/fluidspaces
+
+[Install]
+WantedBy=multi-user.target
