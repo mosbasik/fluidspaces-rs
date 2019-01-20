@@ -7,12 +7,11 @@ mod parser;
 
 use failure::Error;
 
-use i3ipc::reply::Workspaces;
 use i3ipc::reply::Workspace;
+use i3ipc::reply::Workspaces;
 use i3ipc::I3Connection;
 
 use parser::title_from_name;
-
 
 pub trait I3ConnectionExt {
     fn run_commands(&mut self, cmds: &[String]) -> Result<(), Error>;
@@ -25,7 +24,6 @@ impl I3ConnectionExt for I3Connection {
         Ok(())
     }
 }
-
 
 pub trait WorkspacesExt {
     fn fixup_wps(&self) -> Vec<String>;
@@ -58,7 +56,8 @@ impl WorkspacesExt for Workspaces {
     }
 
     fn choices_str(&self) -> String {
-        let mut numbered_titles: Vec<(usize, &str)> = self.workspaces
+        let mut numbered_titles: Vec<(usize, &str)> = self
+            .workspaces
             .iter()
             .map(|wp| (wp.num as usize, wp.title()))
             .collect();
@@ -91,7 +90,6 @@ impl WorkspacesExt for Workspaces {
     }
 }
 
-
 pub trait WorkspaceExt {
     fn promote(&self) -> String;
     fn title<'a>(&'a self) -> &'a str;
@@ -99,14 +97,17 @@ pub trait WorkspaceExt {
 
 impl WorkspaceExt for Workspace {
     fn promote(&self) -> String {
-        format!("rename workspace \"{}\" to \"0:{}\"", self.name, self.title())
+        format!(
+            "rename workspace \"{}\" to \"0:{}\"",
+            self.name,
+            self.title()
+        )
     }
 
     fn title<'a>(&'a self) -> &'a str {
         title_from_name(&self.name).unwrap()
     }
 }
-
 
 pub fn go_to(name: &str) -> String {
     format!("workspace \"{}\"", name)
