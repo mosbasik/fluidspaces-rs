@@ -91,11 +91,26 @@ fn handle_stream(i3: &mut I3Connection, stream: &mut UnixStream) -> Result<(), E
 
     // establish the target workspace name (or title) for this action
     let target = match message.as_str() {
-        // if the action is "toggle", that's all we need to find the target
-        "toggle" => match workspaces.get_wp_with_number(2) {
-            Some(wp) => wp.name.clone(),
-            None => return Err(err_msg(format!("Couldn't find workspace number 2"))),
-        },
+        // if the action is "toggle"
+        "toggle" => {
+            // determine the currently focused workspace and get the name of the output it's on
+            let active_output = match workspaces.workspaces.iter().find(|wp| wp.focused == true) {
+                Some(wp) => wp.output.clone(),
+                None => return Err(err_msg(format!("Couldn't find a focused workspace"))),
+            };
+
+            println!("active output: \"{}\"", active_output);
+
+            // determine the name of the second workspace on the active output
+            match workspaces.get_second_wp_with_output(&active_output) {
+                Some(wp) => wp.name.clone(),
+                None => {
+                    return Err(err_msg(format!(
+                        "Couldn't find a second workspace on the active output"
+                    )))
+                }
+            }
+        }
 
         // if the action isn't "toggle", we have to ask the user to specify a target
         _ => {

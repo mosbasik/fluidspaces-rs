@@ -1,7 +1,7 @@
 # Maintainer: Peter Henry <me@peterhenry.net>
 pkgname="fluidspaces-rs"
 _pkgname="fluidspaces"
-pkgver=0.5.0
+pkgver=0.5.1
 pkgrel=1
 pkgdesc="Daemon written in Rust to manage dynamically named i3 workspaces."
 arch=('x86_64')
@@ -16,7 +16,7 @@ conflicts=($_pkgname)
 # backup=()
 options=()
 # changelog=
-source=("$pkgname::git+https://github.com/mosbasik/fluidspaces-rs.git#tag=v0.5.0")
+source=("$pkgname::git+https://github.com/mosbasik/fluidspaces-rs.git#tag=v0.5.1")
 # noextract=()
 # md5sums=() #autofill using updpkgsums
 sha256sums=('SKIP')
